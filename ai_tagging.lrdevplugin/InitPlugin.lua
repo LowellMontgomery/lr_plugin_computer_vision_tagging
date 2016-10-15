@@ -25,17 +25,15 @@ What to do when plugin is loaded?
 ------------------------------------------------------------------------------]]
 
 local KmnUtils = require 'KmnUtils'
-KmnUtils.enableDisableLogging()
 
-local prefs = import 'LrPrefs'.prefsForPlugin(_PLUGIN.id)
 -- Provide initial default values for plugin preferences.
+local prefs = import 'LrPrefs'.prefsForPlugin(_PLUGIN.id)
 
 local defaultPrefValues = {
-   
    clarifai_clientsecret = '',
    clarifai_clientid = '',
    log_level = KmnUtils.LogError,
-   KmnUtils.SortProb,
+   sort = KmnUtils.SortProb,
    thumbnail_size = 256,
    tag_window_width = 1024,
    tag_window_height = 768,
@@ -46,7 +44,11 @@ local defaultPrefValues = {
    -- auto_select_existing_keywords = true,
 }
 
-for k,v in pairs(defaultPrefValues) do
-   if prefs[k] == nil then prefs[k] = v end
+if prefs ~= nil then
+  for k,v in pairs(defaultPrefValues) do
+     if prefs[k] == nil then prefs[k] = v end
+  end
 end
 
+-- Setup logging AFTER defaults are set for the plugin
+KmnUtils.enableDisableLogging()

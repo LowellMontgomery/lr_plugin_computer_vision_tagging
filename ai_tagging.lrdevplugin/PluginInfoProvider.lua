@@ -36,6 +36,7 @@ local prefs = import 'LrPrefs'.prefsForPlugin(_PLUGIN.id)
 local InfoProvider = {}
 
 function InfoProvider.sectionsForTopOfDialog(viewFactory, properties)
+  KmnUtils.log(KmnUtils.LogTrace, 'InfoProvider.sectionsForTopOfDialog(viewFactory, properties)');
   local vf = viewFactory
   local bind = LrView.bind
   
@@ -255,6 +256,7 @@ function InfoProvider.sectionsForTopOfDialog(viewFactory, properties)
 end
 
 function InfoProvider.sectionsForBottomOfDialog(viewFactory, properties)
+  KmnUtils.log(KmnUtils.LogTrace, 'InfoProvider.sectionsForBottomOfDialog(viewFactory, properties)');
   local vf = viewFactory;
   
   return {
@@ -275,11 +277,13 @@ function InfoProvider.sectionsForBottomOfDialog(viewFactory, properties)
 end
 
 function InfoProvider.endDialog(properties)
+  KmnUtils.log(KmnUtils.LogTrace, 'InfoProvider.endDialog(properties)');
   -- Ensure logging is turned on/off if pref changed
   KmnUtils.enableDisableLogging();
   
-  -- Generate Clarifai access token if it's missing/empty
-  if prefs.clarifai_accesstoken == nil or prefs.clarifai_accesstoken == '' then
+  -- Generate Clarifai access token if it's missing/empty -- ONLY IF the requisite fields are set in preferences
+  if (prefs.clarifai_clientid ~= nil and prefs.clarifai_clientid ~= '' and prefs.clarifai_clientsecret ~= nil and prefs.clarifai_clientsecret ~= '')
+      and (prefs.clarifai_accesstoken == nil or prefs.clarifai_accesstoken == '') then
     ClarifaiAPI.getToken();
    end
 end

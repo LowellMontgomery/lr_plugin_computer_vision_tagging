@@ -31,13 +31,12 @@ local LrDialogs = import 'LrDialogs'
 local LrFunctionContext = import 'LrFunctionContext'
 local LrProgressScope = import 'LrProgressScope'
 local LrPathUtils = import 'LrPathUtils'
-local LrPrefs = import 'LrPrefs'
 local LrTasks = import 'LrTasks'
 local KmnUtils = require 'KmnUtils'
 local Tagging = require 'Tagging'
 local ClarifaiAPI = require 'ClarifaiAPI'
 
-local prefs = LrPrefs.prefsForPlugin();
+local prefs = import 'LrPrefs'.prefsForPlugin(_PLUGIN.id)
 
 local vf = LrView.osFactory();
 local bind = LrView.bind;
@@ -46,6 +45,7 @@ local share = LrView.share
 local DialogTagging = {};
 
 function DialogTagging.buildTagGroup(photo, tags, propertyTable)
+  KmnUtils.log(KmnUtils.LogTrace, 'DialogTagging.buildTagGroup(photo, tags, propertyTable)');
   local tagRows = {};
 
   KmnUtils.log(KmnUtils.LogDebug, prefs.sort);
@@ -106,6 +106,7 @@ function DialogTagging.buildTagGroup(photo, tags, propertyTable)
 end
 
 function DialogTagging.buildColumn(context, exportParams, properties, photo, tags, processedTags)
+  KmnUtils.log(KmnUtils.LogTrace, 'DialogTagging.buildColumn(context, exportParams, properties, photo, tags, processedTags)');
   local contents = {};
 
   local photoTitle = photo:getFormattedMetadata 'title';
@@ -127,30 +128,34 @@ function DialogTagging.buildColumn(context, exportParams, properties, photo, tag
       height = prefs.thumbnail_size,
     }
   };
-
-  contents[#contents + 1] = vf:row {
-    vf:group_box {
-      title = 'API Settings',
-      vf:row {
-        vf:static_text {
-          title = 'Model',
-          font = '<system/bold>'
+  
+  -- There are circumstances where no tags will be returned, be sure to avoid a null crash on tags.meta
+  --    in case that happens
+  if tags.meta ~= nil then 
+    contents[#contents + 1] = vf:row {
+      vf:group_box {
+        title = 'API Settings',
+        vf:row {
+          vf:static_text {
+            title = 'Model',
+            font = '<system/bold>'
+          },
+          vf:static_text {
+            title = tags.meta.tag.model
+          }
         },
-        vf:static_text {
-          title = tags.meta.tag.model
-        }
-      },
-      vf:row {
-        vf:static_text {
-          title = 'Language',
-          font = '<system/bold>'
+        vf:row {
+          vf:static_text {
+            title = 'Language',
+            font = '<system/bold>'
+          },
+          vf:static_text {
+            title = exportParams.clarifai_language
+          },
         },
-        vf:static_text {
-          title = exportParams.clarifai_language
-        },
-      },
-    }
-  };
+      }
+    };
+  end
 
   local imageProperties = LrBinding.makePropertyTable(context);
   properties[photo] = imageProperties;
@@ -166,12 +171,25 @@ function DialogTagging.buildColumn(context, exportParams, properties, photo, tag
 end
 
 function DialogTagging.buildDialog(photosToTag, exportParams, mainProgress)
+  KmnUtils.log(KmnUtils.LogTrace, 'DialogTagging.buildDialog(photosToTag, exportParams, mainProgress)');
+  KmnUtils.log(KmnUtils.LogTrace, table.tostring(photosToTag));
   LrFunctionContext.callWithContext('DialogTagger', function(context)
+    -- If don't have photos to tag (empty table), bail out with error
+    -- Note #photosToTag will ALWAYS return 0, do the check the hard way
+    local hasPhotosToTag = false;
+    for photo,tags in pairs(photosToTag) do
+      hasPhotosToTag = true;
+      break;
+    end
+    if not hasPhotosToTag then
+      LrDialogs.showError('Error processing photos, please check selected API preferences/tokens and try again');
+      return
+    end
+
     local properties = {};
     local columns = {};
-
     local processedTags = {};
-
+    
     for photo,tags in pairs(photosToTag) do
       local photoProcessedTags = ClarifaiAPI.processTagsProbibilities(tags);
       processedTags[photo] = photoProcessedTags;
