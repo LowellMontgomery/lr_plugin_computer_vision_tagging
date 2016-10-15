@@ -280,12 +280,6 @@ function InfoProvider.endDialog(properties)
   KmnUtils.log(KmnUtils.LogTrace, 'InfoProvider.endDialog(properties)');
   -- Ensure logging is turned on/off if pref changed
   KmnUtils.enableDisableLogging();
-  
-  -- Generate Clarifai access token if it's missing/empty -- ONLY IF the requisite fields are set in preferences
-  if (prefs.clarifai_clientid ~= nil and prefs.clarifai_clientid ~= '' and prefs.clarifai_clientsecret ~= nil and prefs.clarifai_clientsecret ~= '')
-      and (prefs.clarifai_accesstoken == nil or prefs.clarifai_accesstoken == '') then
-    ClarifaiAPI.getToken();
-   end
 end
 
 
