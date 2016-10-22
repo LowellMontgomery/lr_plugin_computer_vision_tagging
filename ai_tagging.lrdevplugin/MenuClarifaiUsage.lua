@@ -32,16 +32,18 @@ local LrPrefs = import 'LrPrefs'
 local KmnUtils = require 'KmnUtils'
 local ClarifaiAPI = require 'ClarifaiAPI'
 
-local prefs = LrPrefs.prefsForPlugin();
+local prefs = import 'LrPrefs'.prefsForPlugin(_PLUGIN.id)
 
 local get_usage_result;
 LrFunctionContext.callWithContext("get_info_result_table", function( context )
+  KmnUtils.log(KmnUtils.LogTrace, 'MenuClarifaiUsage.LrFunctionContext.callWithContext(get_info_result_table');
   get_usage_result = LrBinding.makePropertyTable( context );
   get_usage_result.user_throttles = {};
   get_usage_result.app_throttles = {};
 end)
 
 local function lookup_ui_user_throttles_tooltip(component)
+  KmnUtils.log(KmnUtils.LogTrace, 'MenuClarifaiUsage.lookup_ui_user_throttles_tooltip(component)');
   if component == 'consumed' then
     return 'How many units you have currently consumed.';
   elseif component == 'consumed_percentage' then
@@ -58,6 +60,7 @@ local function lookup_ui_user_throttles_tooltip(component)
 end
 
 local function lookup_ui_user_throttles_title(component)
+  KmnUtils.log(KmnUtils.LogTrace, 'MenuClarifaiUsage.lookup_ui_user_throttles_title(component)');
   if component == 'wait' then
     return "Wait (s)";
   elseif component == 'units' then
@@ -73,6 +76,7 @@ local function lookup_ui_user_throttles_title(component)
 end
 
 local function ui_group_user_throttles(vf, bind)
+  KmnUtils.log(KmnUtils.LogTrace, 'MenuClarifaiUsage.ui_group_user_throttles(vf, bind)');
   local detail_rows = {};
   local row_count = 1;
 
@@ -106,6 +110,7 @@ local function ui_group_user_throttles(vf, bind)
 end
 
 LrFunctionContext.callWithContext( 'HelpClarifaiUsage', function( context )
+  KmnUtils.log(KmnUtils.LogTrace, 'MenuClarifaiUsage.LrFunctionContext.callWithContext(HelpClarifaiUsage)');
   LrFunctionContext.postAsyncTaskWithContext('Help.Clarifai.APIUsage', function()
     local clarifaiUsage = ClarifaiAPI.getUsage();
     for key,value in pairs(clarifaiUsage.results.app_throttles) do

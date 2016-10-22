@@ -28,14 +28,14 @@ local LrView = import 'LrView'
 local LrBinding = import 'LrBinding'
 local LrDialogs = import 'LrDialogs'
 local LrFunctionContext = import 'LrFunctionContext'
-local LrPrefs = import 'LrPrefs'
 local KmnUtils = require 'KmnUtils'
 local ClarifaiAPI = require 'ClarifaiAPI'
 
-local prefs = LrPrefs.prefsForPlugin();
+local prefs = import 'LrPrefs'.prefsForPlugin(_PLUGIN.id)
 
 local get_info_result;
 LrFunctionContext.callWithContext("get_info_result_table", function( context )
+  KmnUtils.log(KmnUtils.LogTrace, 'MenuClarifaiInfo.LrFunctionContext.callWithContext(get_info_result_table)');
   get_info_result = LrBinding.makePropertyTable( context );
   get_info_result.max_video_batch_size = -1;
   get_info_result.max_image_size = -1;
@@ -52,6 +52,7 @@ LrFunctionContext.callWithContext("get_info_result_table", function( context )
 end)
 
 LrFunctionContext.callWithContext( 'HelpClarifaiInfo', function( context )
+  KmnUtils.log(KmnUtils.LogTrace, 'MenuClarifaiInfo.LrfunctionContext.callWithContext(HelpClarifaiInfo)');
   LrFunctionContext.postAsyncTaskWithContext('Help.Clarifai.APIInfo', function()
     local clarifaiInfo = ClarifaiAPI.getInfo();
         get_info_result.max_video_batch_size = clarifaiInfo.results.max_video_batch_size;

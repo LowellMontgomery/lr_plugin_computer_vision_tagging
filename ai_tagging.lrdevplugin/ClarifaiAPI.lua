@@ -24,7 +24,6 @@ Clarifai API implementation in pure lua
 
 ------------------------------------------------------------------------------]]
 
-local LrPrefs = import 'LrPrefs'
 local LrDialogs = import 'LrDialogs'
 local LrHttp = import 'LrHttp'
 local LrTasks = import 'LrTasks'
@@ -38,11 +37,43 @@ local infoAPIURL = 'https://api.clarifai.com/v1/info/'
 local usageAPIURL = 'https://api.clarifai.com/v1/usage/'
 local tagAPIURL   = 'https://api.clarifai.com/v1/tag/'
 
-local prefs = LrPrefs.prefsForPlugin();
+local prefs = import 'LrPrefs'.prefsForPlugin(_PLUGIN.id)
 
 ClarifaiAPI = {}
 
+function ClarifaiAPI.isTokenValid()
+  KmnUtils.log(KmnUtils.LogTrace, 'ClarifaiAPI.isTokenValid()');
+  if prefs.clarifai_accesstoken ~= nil and prefs.clarifai_accesstoken ~= '' then
+    return true;
+  end
+  
+  return false;
+end
+
+function ClarifaiAPI.isSecretValid()
+  KmnUtils.log(KmnUtils.LogTrace, 'ClarifaiAPI.isSecretValid()');
+  if prefs.clarifai_clientsecret ~= nil and prefs.clarifai_clientsecret ~= '' then
+    return true;
+  end
+  
+  return false;
+end
+  
+function ClarifaiAPI.isClientIdValid()
+  KmnUtils.log(KmnUtils.LogTrace, 'ClarifaiAPI.isClientIdValid()');
+  if prefs.clarifai_clientid ~= nil and prefs.clarifai_clientid ~= '' then
+    return true;
+  end
+  
+  return false;
+end
+
 function ClarifaiAPI.getTokenUnsafe()
+  KmnUtils.log(KmnUtils.LogTrace, 'ClarifaiAPI.getTokenUnsafe()');
+  if not ClarifaiAPI.isClientIdValid() or not ClarifaiAPI.isSecretValid() then
+    return
+  end
+
   local headers = {
     { field = 'Content-Type', value = 'application/x-www-form-urlencoded' },
   };
@@ -66,14 +97,22 @@ end
 
 -- Main methods API consumers should call (everything is wrapped in tasks as appropriate)
 function ClarifaiAPI.getToken()
+  KmnUtils.log(KmnUtils.LogTrace, 'ClarifaiAPI.getToken()');
   LrTasks.startAsyncTask(function()
     ClarifaiAPI.getTokenUnsafe();
   end, 'ClarifaiAPI.getToken');
 end
 
 function ClarifaiAPI.getInfo()
-  if prefs.clarifai_accesstoken == nil then
+  KmnUtils.log(KmnUtils.LogTrace, 'ClarifaiAPI.getInfo()');
+  -- Ensure token is valid before running an operation
+  if not ClarifaiAPI.isTokenValid() then
     ClarifaiAPI.getTokenUnsafe();
+  end
+  
+  -- If token still isn't valid, return empty table
+  if not ClarifaiAPI.isTokenValid() then
+    return {};
   end
 
   local headers = {
@@ -94,8 +133,15 @@ function ClarifaiAPI.getInfo()
 end
 
 function ClarifaiAPI.getUsage()
-  if prefs.clarifai_accesstoken == nil then
+  KmnUtils.log(KmnUtils.LogTrace, 'ClarifaiAPI.getUsage()');
+  -- Make sure token is valid before running any operations
+  if not ClarifaiAPI.isTokenValid() then
     ClarifaiAPI.getTokenUnsafe();
+  end
+  
+  -- If token is still invalid, return empty table
+  if not ClarifaiAPI.isTokenValid() then
+    return {};
   end
 
   local headers = {
@@ -116,8 +162,14 @@ function ClarifaiAPI.getUsage()
 end
 
 function ClarifaiAPI.getTags(photoPath, model, language)
-  if prefs.clarifai_accesstoken == nil then
+  KmnUtils.log(KmnUtils.LogTrace, 'ClarifaiAPI.getTags(photoPath, model, language)');
+  if not ClarifaiAPI.isTokenValid() then
     ClarifaiAPI.getTokenUnsafe();
+  end
+  
+  -- If token still isn't valid, return empty table
+  if not ClarifaiAPI.isTokenValid() then
+    return {};
   end
   
   local fileName = LrPathUtils.leafName(photoPath);
@@ -143,6 +195,18 @@ function ClarifaiAPI.getTags(photoPath, model, language)
 end
 
 function ClarifaiAPI.processTagsProbibilities(response)
+  KmnUtils.log(KmnUtils.LogTrace, 'ClarifaiAPI.processTagsProbibilities(response)');
+  -- Don't crash if we receive an empty response
+  -- #response will always return 0, do the check the hard way
+  local hasResponseValues = false;
+  for _, tag in pairs(response) do
+    hasResponseValues = true;
+    break;
+  end
+  if not hasResponseValues then
+    return {};
+  end
+  
   local processedTagsProbabilities = {}
   for i, tag in ipairs(response['results'][1]['result']['tag']['classes']) do
     processedTagsProbabilities[#processedTagsProbabilities + 1] = { tag = tag, probability = response['results'][1]['result']['tag']['probs'][i], service = KmnUtils.SrvClarifai };

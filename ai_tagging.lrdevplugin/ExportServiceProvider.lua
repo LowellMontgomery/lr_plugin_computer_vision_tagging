@@ -24,7 +24,6 @@ Define the export process for submitting photos to APIs
 
 ------------------------------------------------------------------------------]]
 
-local LrPrefs = import 'LrPrefs'
 local LrView = import 'LrView'
 local LrBinding = import 'LrBinding'
 local LrPathUtils = import 'LrPathUtils'
@@ -34,7 +33,7 @@ local KmnUtils = require 'KmnUtils'
 local ClarifaiAPI = require 'ClarifaiAPI'
 local DialogTagging = require 'DialogTagging'
 
-local prefs = LrPrefs.prefsForPlugin();
+local prefs = import 'LrPrefs'.prefsForPlugin(_PLUGIN.id)
 
 local exportServiceProvider = {}
 exportServiceProvider.hideSections = { 'fileNaming', 'exportLocation', 'fileSettings', 'imageSettings', 'video' }
@@ -53,6 +52,7 @@ exportServiceProvider.exportPresetFields = {
 }
 
 function exportServiceProvider.sectionsForTopOfDialog( vf, propertyTable )
+  KmnUtils.log(KmnUtils.LogTrace, 'exportServiceProvider.sectionsForTopOfDialog(vf, propertyTable)');
   local bind = LrView.bind;
   
   return {
@@ -202,6 +202,7 @@ function exportServiceProvider.sectionsForTopOfDialog( vf, propertyTable )
 end
 
 function exportServiceProvider.updateExportSettings( exportSettings )
+  KmnUtils.log(KmnUtils.LogTrace, 'exportServiceProvider.updateExportSettings(exportSettings)');
   -- Ensure these files never get saved
   exportSettings.LR_export_destinationType = 'tempFolder';
   -- APIs use JPEGs, ensure sending the right type
@@ -220,6 +221,7 @@ function exportServiceProvider.updateExportSettings( exportSettings )
 end
 
 function exportServiceProvider.processRenderedPhotos( functionContext, exportContext )
+  KmnUtils.log(KmnUtils.LogTrace, 'exportServiceProvider.processRenderedPhotos(functionContext, exportContext)');
   local exportSession = exportContext.exportSession;
   local exportParams = exportContext.propertyTable;
   

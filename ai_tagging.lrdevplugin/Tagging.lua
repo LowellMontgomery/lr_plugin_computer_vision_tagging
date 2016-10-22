@@ -31,6 +31,7 @@ local KmnUtils = require 'KmnUtils'
 Tagging = {}
 
 function Tagging.tagPhotos(tagsByPhoto, tagSelectionsByPhoto, parentProgress)
+  KmnUtils.log(KmnUtils.LogTrace, 'Tagging.tagPhotos(tagsByPhoto, tagSelectionsByPhoto, parentProgress)');
   KmnUtils.log(KmnUtils.LogTrace, table.tostring(tagsByPhoto));
   KmnUtils.log(KmnUtils.LogTrace, table.tostring(tagSelectionsByPhoto));
 

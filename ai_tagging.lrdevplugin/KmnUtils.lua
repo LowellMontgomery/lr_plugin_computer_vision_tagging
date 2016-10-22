@@ -26,11 +26,10 @@ Various utility functions
 
 local LrLogger = import 'LrLogger'
 local LrPathUtils = import 'LrPathUtils'
-local LrPrefs = import 'LrPrefs'
 local PlugInfo = require 'Info'
 
 -- Setup useful bits that are needed elsewhere
-local prefs = LrPrefs.prefsForPlugin();
+local prefs = import 'LrPrefs'.prefsForPlugin(_PLUGIN.id)
 local logger = LrLogger(PlugInfo.LrToolkitIdentifier);
 
 -- Functions / additions for dumping tables to strings
@@ -89,8 +88,13 @@ KmnUtils.LogFatal = 1;
 KmnUtils.LogDisabled = -1;
 
 function KmnUtils.log(level, value)
+  -- There is a chance prefs will be null or log_level will be null; don't crash in that circumstance
+  if prefs == nil or prefs.log_level == nil then
+    return
+  end
+  
   -- Don't log if it's not turned on OR the log level in preferences isn't set high enough
-  if level < prefs.log_level then
+  if level > prefs.log_level then
     return;
   end
 
@@ -110,7 +114,7 @@ function KmnUtils.log(level, value)
 end
 
 function KmnUtils.enableDisableLogging() 
-  if prefs ~= nil and prefs.log_level > 0 then
+  if prefs ~= nil and prefs.log_level ~= nil and prefs.log_level > 0 then
     logger:enable( 'logfile' );
     KmnUtils.log(KmnUtils.LogInfo, 'Debug log enabled');
   else
@@ -119,6 +123,7 @@ function KmnUtils.enableDisableLogging()
 end
 
 function KmnUtils.photoHasKeyword(photo, keyword)
+  KmnUtils.log(KmnUtils.LogTrace, 'KmnUtils.photoHasKeyword(photo, keyword)');
   local keywords = photo:getRawMetadata('keywords');
   
   for _, k in ipairs(keywords) do
