@@ -75,6 +75,30 @@ function InfoProvider.sectionsForTopOfDialog(viewFactory, properties)
           value = bind 'bold_existing_tags',
         },
       },
+      vf:row {
+         spacing = vf:control_spacing(),
+         vf:checkbox {
+           title = LOC '$$$/ComputerVisionTagging/preferences/autoSelectExistingKeywords=Automatically Select Existing Keywords',
+           tooltip = "Selecting this option will auto-select keyword checkboxes which would *not* create a new term in your keyword list.",
+           value = bind 'auto_select_existing_keywords',
+         },
+      },
+      vf:row {
+        spacing = vf:label_spacing(),
+        vf:static_text {
+          title = LOC '$$$/ComputerVisionTagging/preferences/ignoreKeywordTreeBranches=Ignore keywords branches:',
+          tooltip = 'Comma-separated list of keyword terms to ignore (including chilren and descendants).',
+          alignment = 'left',
+        },
+         viewFactory:edit_field {
+            tooltip = 'Comma-separated list of keyword terms to ignore (including chilren and descendants).',
+            width_in_chars = 35,
+            height_in_lines = 4,
+            enabled = true,
+            alignment = 'left',
+            value = bind 'ignore_keyword_branches',
+         },
+      },      
       vf:row { 
         spacing = vf:control_spacing(),
         vf:static_text {

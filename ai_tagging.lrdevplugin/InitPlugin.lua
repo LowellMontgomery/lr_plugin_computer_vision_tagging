@@ -40,8 +40,8 @@ local defaultPrefValues = {
    tag_window_show_probabilities = true,
    bold_existing_tags = true,
    -- auto_select_probability_level = 85,
-   -- ignore_keyword_branches = '',
-   -- auto_select_existing_keywords = true,
+   ignore_keyword_branches = '',
+   auto_select_existing_keywords = true,
 }
 
 if prefs ~= nil then
