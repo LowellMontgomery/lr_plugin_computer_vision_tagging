@@ -28,6 +28,7 @@ local LrBinding = import 'LrBinding'
 local LrFunctionContext = import 'LrFunctionContext'
 local LrView = import 'LrView'
 local LrColor = import 'LrColor'
+local LrHttp = import 'LrHttp'
 local PlugInfo = require 'Info'
 local KmnUtils = require 'KmnUtils'
 local ClarifaiAPI = require 'ClarifaiAPI'
@@ -53,6 +54,46 @@ function InfoProvider.sectionsForTopOfDialog(viewFactory, properties)
     {
       title = LOC '$$$/ComputerVisionTagging/Preferences/VersionTitle=Computer Vision Tagging Plugin',
       vf:row {
+        vf:static_text {
+          title = 'Website',
+          text_color = LrColor('blue'),
+          font = '<system/bold>',
+          mouse_down = function (clickedview)
+            LrHttp.openUrlInBrowser( 'https://mcrosson.github.io/lr_plugin_computer_vision_tagging/' );
+          end
+        },
+        vf:static_text {
+          title = 'Changelog',
+          text_color = LrColor('blue'),
+          font = '<system/bold>',
+          mouse_down = function (clickedview)
+            LrHttp.openUrlInBrowser( 'https://mcrosson.github.io/lr_plugin_computer_vision_tagging/changelog/' );
+          end
+        },
+        vf:picture {
+          value = _PLUGIN:resourceId('icon_download.png'),
+        },
+        vf:static_text {
+          title = 'Releases',
+          text_color = LrColor('blue'),
+          font = '<system/bold>',
+          mouse_down = function (clickedview)
+            LrHttp.openUrlInBrowser( 'https://mcrosson.github.io/lr_plugin_computer_vision_tagging/releases/' );
+          end
+        },
+        vf:picture {
+          value = _PLUGIN:resourceId('icon_rss.png'),
+        },
+        vf:static_text {
+          title = 'Subscribe (Releases)',
+          text_color = LrColor('blue'),
+          font = '<system/bold>',
+          mouse_down = function (clickedview)
+            LrHttp.openUrlInBrowser( 'https://mcrosson.github.io/lr_plugin_computer_vision_tagging/feed.xml' );
+          end
+        },
+      },
+      vf:row {
         spacing = vf:control_spacing(),
         vf:static_text {
           title = LOC '$$$/ComputerVisionTagging/Preferences/Version=Version',
@@ -67,53 +108,21 @@ function InfoProvider.sectionsForTopOfDialog(viewFactory, properties)
       title = LOC '$$$/ComputerVisionTagging/Preferences/Global=Global',
       bind_to_object = prefs,
       vf:row {
-        spacing = vf:control_spacing(),
-        vf:checkbox {
-          title = 'Bold exising keywords/tags',
-          checked_value = true,
-          unchecked_value = false,
-          value = bind 'bold_existing_tags',
-        },
-      },
-      vf:row {
-         spacing = vf:control_spacing(),
-         vf:checkbox {
-           title = LOC '$$$/ComputerVisionTagging/preferences/autoSelectExistingKeywords=Automatically Select Existing Keywords',
-           tooltip = "Selecting this option will auto-select keyword checkboxes which would *not* create a new term in your keyword list.",
-           value = bind 'auto_select_existing_keywords',
-         },
-      },
-      vf:row {
         spacing = vf:label_spacing(),
         vf:static_text {
           title = LOC '$$$/ComputerVisionTagging/preferences/ignoreKeywordTreeBranches=Ignore keywords branches:',
           tooltip = 'Comma-separated list of keyword terms to ignore (including chilren and descendants).',
           alignment = 'left',
         },
-         viewFactory:edit_field {
-            tooltip = 'Comma-separated list of keyword terms to ignore (including chilren and descendants).',
-            width_in_chars = 35,
-            height_in_lines = 4,
-            enabled = true,
-            alignment = 'left',
-            value = bind 'ignore_keyword_branches',
-         },
+        viewFactory:edit_field {
+          tooltip = 'Comma-separated list of keyword terms to ignore (including chilren and descendants).',
+          width_in_chars = 35,
+          height_in_lines = 4,
+          enabled = true,
+          alignment = 'left',
+          value = bind 'ignore_keyword_branches',
+        },
       },      
-      vf:row { 
-        spacing = vf:control_spacing(),
-        vf:static_text {
-          title = LOC '$$$/ComputerVisionTagging/preferences/Global/TagSort=Tag Sorting',
-          tooltip = 'How to sort tags in tagging dialog',
-        },
-        vf:popup_menu {
-          tooltip = 'How to sort tags in tagging dialog',
-          items = {
-            { title = 'Probability', value = KmnUtils.SortProb },
-            { title = 'Alphabetical', value = KmnUtils.SortAlpha },
-          },
-          value = bind 'sort',
-        },
-      },
       vf:row {
         spacing = vf:control_spacing(),
         vf:static_text {
@@ -138,6 +147,40 @@ function InfoProvider.sectionsForTopOfDialog(viewFactory, properties)
     {
       title = LOC '$$$/ComputerVisionTagging/Preferences/TagWindow=Tag Window',
       bind_to_object = prefs,
+      vf:row { 
+        spacing = vf:control_spacing(),
+        vf:static_text {
+          title = 'Tag Sorting',
+          tooltip = 'How to sort tags in tagging dialog',
+        },
+        vf:popup_menu {
+          tooltip = 'How to sort tags in tagging dialog',
+          items = {
+            { title = 'Probability', value = KmnUtils.SortProb },
+            { title = 'Alphabetical', value = KmnUtils.SortAlpha },
+          },
+          value = bind 'tag_window_sort',
+        },
+      },
+      vf:row {
+      spacing = vf:control_spacing(),
+        vf:checkbox {
+          title = LOC '$$$/ComputerVisionTagging/preferences/autoSelectExistingKeywords=Automatically Select Existing Keywords',
+          checked_value = true,
+          unchecked_value = false,
+          tooltip = "Selecting this option will auto-select keyword checkboxes which would *not* create a new term in your keyword list.",
+          value = bind 'auto_select_existing_keywords',
+        },
+      },
+      vf:row {
+        spacing = vf:control_spacing(),
+        vf:checkbox {
+          title = 'Bold existing keywords/tags',
+          checked_value = true,
+          unchecked_value = false,
+          value = bind 'tag_window_bold_existing_tags',
+        },
+      },
       vf:row {
         spacing = vf:control_spacing(),
         vf:checkbox {
@@ -149,27 +192,12 @@ function InfoProvider.sectionsForTopOfDialog(viewFactory, properties)
       },
       vf:row {
         spacing = vf:control_spacing(),
-        vf:static_text {
-          title = 'Thumbnail size',
-          tooltip = 'Size (px) for the smallest edge of thumbnails in the tagging dialog'
+        vf:checkbox {
+          title = 'Show service(s) that a tag was suggested by',
+          checked_value = true,
+          unchecked_value = false,
+          value = bind 'tag_window_show_services',
         },
-        vf:slider {
-          value = bind 'thumbnail_size',
-          min = 128,
-          max = 512,
-          integral = true,
-          tooltip = 'Size (px) for the smallest edge of thumbnails in the tagging dialog'
-        },
-        vf:edit_field {
-          value = bind 'thumbnail_size',
-          tooltip = 'Size (px) for the smallest edge of thumbnails in the tagging dialog',
-          fill_horizonal = 1,
-          width_in_chars = 4,
-          min = 128,
-          max = 512,
-          increment = 1,
-          precision = 0,
-        }
       },
       vf:row {
         spacing = vf:control_spacing(),
@@ -203,6 +231,30 @@ function InfoProvider.sectionsForTopOfDialog(viewFactory, properties)
           precision = 0,
         }
       },
+      vf:row {
+        spacing = vf:control_spacing(),
+        vf:static_text {
+          title = 'Thumbnail size',
+          tooltip = 'Size (px) for the smallest edge of thumbnails in the tagging dialog'
+        },
+        vf:slider {
+          value = bind 'tag_window_thumbnail_size',
+          min = 128,
+          max = 512,
+          integral = true,
+          tooltip = 'Size (px) for the smallest edge of thumbnails in the tagging dialog'
+        },
+        vf:edit_field {
+          value = bind 'tag_window_thumbnail_size',
+          tooltip = 'Size (px) for the smallest edge of thumbnails in the tagging dialog',
+          fill_horizonal = 1,
+          width_in_chars = 4,
+          min = 128,
+          max = 512,
+          increment = 1,
+          precision = 0,
+        }
+      },
     },
     {
       title = LOC '$$$/ComputerVisionTagging/Preferences/ClarifaiSettings=Clarifai Settings',
@@ -213,7 +265,7 @@ function InfoProvider.sectionsForTopOfDialog(viewFactory, properties)
           title = LOC '$$$/ComputerVisionTagging/Preferences/ClarifaiSettings/ClientID=Client ID',
         },
         vf:edit_field {
-          fill_horizonal = true,
+          fill_horizonal = 1,
           width_in_chars = 35,
           value = bind 'clarifai_clientid',
         },
@@ -246,7 +298,12 @@ function InfoProvider.sectionsForTopOfDialog(viewFactory, properties)
           action = function(button)
                       LrFunctionContext.postAsyncTaskWithContext('ClarifaiSettings.VerifySettingsButton', function()
                         local clarifaiInfo = ClarifaiAPI.getInfo();
-                        if clarifaiInfo ~= nil then
+                        local hasClarifaiInfo = false; -- do this the "dumb" way thanks to #clarifaiInfo not working properly
+                        for _,__ in pairs(clarifaiInfo) do
+                          hasClarifaiInfo = true;
+                          break;
+                        end
+                        if clarifaiInfo ~= nil and hasClarifaiInfo then
                           get_info_result.message = 'Success';
                           get_info_result.color = LrColor('green');
                         else
@@ -261,6 +318,12 @@ function InfoProvider.sectionsForTopOfDialog(viewFactory, properties)
           title = LOC '$$$/ComputerVisionTagging/Preferences/ClarifaiSettings/GenerateAccessToken=Generate New Access Token',
           action = function(button)
                       ClarifaiAPI.getToken()
+                   end
+        },
+        vf:push_button {
+          title = 'Clear Access Token',
+          action = function(button)
+                      prefs.clarifai_accesstoken = '';
                    end
         },
       },
@@ -287,6 +350,7 @@ function InfoProvider.sectionsForBottomOfDialog(viewFactory, properties)
 
       vf:static_text {
         title = LOC '$$$/ComputerVisionTagging/Preferences/SimpleJSON=Simple JSON',
+        font = '<system/bold>',
       },
       vf:edit_field {
         width_in_chars = 80,

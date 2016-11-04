@@ -44,13 +44,13 @@ local share = LrView.share
 
 local DialogTagging = {};
 
-function DialogTagging.buildTagGroup(photo, tags, propertyTable)
-  KmnUtils.log(KmnUtils.LogTrace, 'DialogTagging.buildTagGroup(photo, tags, propertyTable)');
+function DialogTagging.buildTagGroup(photo, tags, propertyTable, exportParams)
+  KmnUtils.log(KmnUtils.LogTrace, 'DialogTagging.buildTagGroup(photo, tags, propertyTable, exportParams)');
   local tagRows = {};
 
-  KmnUtils.log(KmnUtils.LogDebug, prefs.sort);
+  KmnUtils.log(KmnUtils.LogDebug, prefs.tag_window_sort);
 
-  if prefs.sort == KmnUtils.SortProb then
+  if prefs.tag_window_sort == KmnUtils.SortProb then
     table.sort(tags, function(a, b)
       if (a.probability > b.probability) then
         return true;
@@ -58,7 +58,7 @@ function DialogTagging.buildTagGroup(photo, tags, propertyTable)
       return false;
     end
     );
-  elseif prefs.sort == KmnUtils.SortAlpha then
+  elseif prefs.tag_window_sort == KmnUtils.SortAlpha then
     table.sort(tags, function(a, b)
       if (a.tag < b.tag) then
         return true;
@@ -74,9 +74,14 @@ function DialogTagging.buildTagGroup(photo, tags, propertyTable)
     local tagRow = {};
 
     propertyTable[tagName] = false;
-
+    -- Auto select tag if probability is above threshold
+    if exportParams.global_auto_select_tags and (tags[i]['probability'] * 100) >= exportParams.global_auto_select_tags_p_min then
+      propertyTable[tagName] = true;
+    end
+    
+    -- Auto select tag if it's existing
     if KmnUtils.photoHasKeyword(photo, tagName) then
-      if prefs.bold_existing_tags then
+      if prefs.tag_window_bold_existing_tags then
         fontString = '<system/bold>'
       end
       propertyTable[tagName] = true;
@@ -94,6 +99,12 @@ function DialogTagging.buildTagGroup(photo, tags, propertyTable)
     if prefs.tag_window_show_probabilities then
       tagRow[#tagRow + 1] = vf:static_text {
         title = string.format('(%2.1f)', tags[i]['probability'] * 100),
+      };
+    end
+    
+    if prefs.tag_window_show_services then
+      tagRow[#tagRow + 1] = vf:static_text {
+        title = '[' .. tags[i]['service'] .. ']',
       };
     end
 
@@ -124,8 +135,8 @@ function DialogTagging.buildColumn(context, exportParams, properties, photo, tag
   contents[#contents + 1] = vf:row {
     vf:catalog_photo {
       photo = photo,
-      width = prefs.thumbnail_size,
-      height = prefs.thumbnail_size,
+      width = prefs.tag_window_thumbnail_size,
+      height = prefs.tag_window_thumbnail_size,
     }
   };
   
@@ -160,7 +171,7 @@ function DialogTagging.buildColumn(context, exportParams, properties, photo, tag
   local imageProperties = LrBinding.makePropertyTable(context);
   properties[photo] = imageProperties;
 
-  contents[#contents + 1] = DialogTagging.buildTagGroup(photo, processedTags, imageProperties);
+  contents[#contents + 1] = DialogTagging.buildTagGroup(photo, processedTags, imageProperties, exportParams);
 
   contents['height'] = prefs.tag_window_height - 50;
   contents['horizontal_scroller'] = false;

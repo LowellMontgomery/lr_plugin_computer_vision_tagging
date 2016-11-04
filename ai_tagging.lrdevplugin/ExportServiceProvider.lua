@@ -45,10 +45,13 @@ exportServiceProvider.exportPresetFields = {
   { key = 'global_save_sidecar_unique', default = false },
   { key = 'global_size_mpx', default = 2 },
   { key = 'global_jpeg_quality', default = 50 },
+  { key = 'global_auto_select_tags', default = false },
+  { key = 'global_auto_select_tags_p_min', default = 85 },
   { key = 'global_auto_save_tags', default = false },
   { key = 'global_auto_save_tags_p_min', default = 95 },
   { key = 'clarifai_model', default = 'general-v1.3' },
   { key = 'clarifai_language', default = 'en' },
+  { key = 'enable_api_clarifai', default = true },
 }
 
 function exportServiceProvider.sectionsForTopOfDialog( vf, propertyTable )
@@ -59,55 +62,22 @@ function exportServiceProvider.sectionsForTopOfDialog( vf, propertyTable )
     {
       title = LOC '$$$/ComputerVisionTagging/ExportDialog/Global=Global Settings',
       vf:row {
-        vf:checkbox {
-          title = 'Auto save tags',
-          tooltip = 'Automatically save tags (no dialog) with minimum probability',
-          value = bind 'global_auto_save_tags',
-          checked_value = true,
-          unchecked_value = false,
-        },
-      },
-      vf:row {
         vf:static_text {
-          title = 'Auto save minimum probability (inclusive)',
-          tooltip = 'The minimum probability (inclusive) used to determine if a tag is auto-saved'
-        },
-        vf:slider {
-          value = bind 'global_auto_save_tags_p_min',
-          min = 1,
-          max = 100,
-          integral = true,
-          tooltip = 'The minimum probability (inclusive) used to determine if a tag is auto-saved'
-        },
-        vf:edit_field {
-          value = bind 'global_auto_save_tags_p_min',
-          tooltip = 'The minimum probability (inclusive) used to determine if a tag is auto-saved',
-          fill_horizonal = 1,
-          width_in_chars = 4,
-          min = 1,
-          max = 100,
-          increment = 1,
-          precision = 0,
-        }
-      },
-      vf:row {
-        vf:checkbox {
-          title = 'Save sidecar json files',
-          tooltip = 'Save json responses from APIs as sidecar files',
-          value = bind 'global_save_sidecar',
-          checked_value = true,
-          unchecked_value = false,
+          title = 'Select which APIs and services will be used by the plugin',
         },
       },
       vf:row {
         vf:checkbox {
-          title = 'Save sidecars with timestamped names',
-          tooltip = 'Use mm/dd/yyyy.HHMMSS for uniqueness of sidecar names',
-          value = bind 'global_save_sidecar_unique',
+          title = 'Clarifai',
+          enabled = false, -- TODO: Re-enable field when more APIs are implemented
           checked_value = true,
           unchecked_value = false,
+          value = bind 'enable_api_clarifai',
         },
       },
+    },
+    {
+      title = 'Image Quality',
       vf:row {
         vf:static_text {
           title = 'Size (Mpx)',
@@ -141,6 +111,93 @@ function exportServiceProvider.sectionsForTopOfDialog( vf, propertyTable )
           increment = 1,
           precision = 0,
         }
+      },
+    },
+    {
+      title = 'Tags',
+      vf:row {
+        vf:checkbox {
+          title = 'Auto-Select tags',
+          checked_value = true,
+          unchecked_value = false,
+          value = bind 'global_auto_select_tags',
+        },
+      },
+      vf:row {
+        vf:static_text {
+          title = 'Auto select minimum probability (inclusive)',
+          tooltip = 'The minimum probability (inclusive) used to determine if a tag is auto-selected'
+        },
+        vf:slider {
+          value = bind 'global_auto_select_tags_p_min',
+          min = 0,
+          max = 100,
+          integral = true,
+          tooltip = 'The minimum probability (inclusive) used to determine if a tag is auto-selected'
+        },
+        vf:edit_field {
+          value = bind 'global_auto_select_tags_p_min',
+          tooltip = 'The minimum probability (inclusive) used to determine if a tag is auto-selected',
+          fill_horizonal = 1,
+          width_in_chars = 4,
+          min = 0,
+          max = 100,
+          increment = 1,
+          precision = 0,
+        }
+      },
+      vf:row {
+        vf:checkbox {
+          title = 'Auto save tags',
+          tooltip = 'Automatically save tags (no dialog) with minimum probability',
+          value = bind 'global_auto_save_tags',
+          checked_value = true,
+          unchecked_value = false,
+        },
+      },
+      vf:row {
+        vf:static_text {
+          title = 'Auto save minimum probability (inclusive)',
+          tooltip = 'The minimum probability (inclusive) used to determine if a tag is auto-saved'
+        },
+        vf:slider {
+          value = bind 'global_auto_save_tags_p_min',
+          min = 1,
+          max = 100,
+          integral = true,
+          tooltip = 'The minimum probability (inclusive) used to determine if a tag is auto-saved'
+        },
+        vf:edit_field {
+          value = bind 'global_auto_save_tags_p_min',
+          tooltip = 'The minimum probability (inclusive) used to determine if a tag is auto-saved',
+          fill_horizonal = 1,
+          width_in_chars = 4,
+          min = 1,
+          max = 100,
+          increment = 1,
+          precision = 0,
+        }
+      },
+    },
+    {
+      title = 'Side Car files',
+      vf:row {
+        vf:checkbox {
+          title = 'Save sidecar json files',
+          tooltip = 'Save json responses from APIs as sidecar files',
+          value = bind 'global_save_sidecar',
+          checked_value = true,
+          unchecked_value = false,
+        },
+      },
+      vf:row {
+        vf:checkbox {
+          title = 'Save sidecars with timestamped names',
+          tooltip = 'Use mm/dd/yyyy.HHMMSS for uniqueness of sidecar names',
+          value = bind 'global_save_sidecar_unique',
+          checked_value = true,
+          unchecked_value = false,
+        },
       },
     },
     {
@@ -248,7 +305,10 @@ function exportServiceProvider.processRenderedPhotos( functionContext, exportCon
       local filename = LrPathUtils.leafName( pathOrMessage );
       
       local success = false;
-      local result = ClarifaiAPI.getTags(pathOrMessage, exportParams.clarifai_model, exportParams.clarifai_language);
+      local result = nil;
+      if exportParams.enable_api_clarifai then
+        result = ClarifaiAPI.getTags(pathOrMessage, exportParams.clarifai_model, exportParams.clarifai_language);
+      end
       
       if result ~= nil then
         success = true;
