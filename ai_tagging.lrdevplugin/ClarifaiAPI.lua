@@ -38,6 +38,7 @@ local usageAPIURL = 'https://api.clarifai.com/v1/usage/'
 local tagAPIURL   = 'https://api.clarifai.com/v1/tag/'
 
 local prefs = import 'LrPrefs'.prefsForPlugin(_PLUGIN.id)
+local getInfoGuard =  LrRecursionGuard('getInfoguard')
 
 ClarifaiAPI = {}
 
@@ -126,7 +127,7 @@ function ClarifaiAPI.getInfo()
 
   if reshdrs.status == 401 then
     ClarifaiAPI.getTokenUnsafe();
-    return LrRecursionGuard:performWithGuard(ClarifaiAPI.getInfo());
+    return getInfoGuard:performWithGuard(ClarifaiAPI.getInfo());
   end
   
   return JSON:decode(body);
@@ -155,7 +156,7 @@ function ClarifaiAPI.getUsage()
 
   if reshdrs.status == 401 then
     ClarifaiAPI.getTokenUnsafe();
-    return LrRecursionGuard:performWithGuard(ClarifaiAPI.getUsage());
+    return getInfoGuard:performWithGuard(ClarifaiAPI.getUsage());
   end
   
   return JSON:decode(body);
@@ -188,7 +189,7 @@ function ClarifaiAPI.getTags(photoPath, model, language)
   
   if reshdrs.status == 401 then
     ClarifaiAPI.getTokenUnsafe();
-    return LrRecursionGuard:performWithGuard(ClarifaiAPI.getTags(photoPath, model, language));
+    return getInfoGuard:performWithGuard(ClarifaiAPI.getTags(photoPath, model, language));
   end
 
   return JSON:decode(body);

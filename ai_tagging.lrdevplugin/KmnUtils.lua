@@ -77,7 +77,7 @@ KmnUtils = {}
 KmnUtils.SortProb = 'prob';
 KmnUtils.SortAlpha = 'alpha';
 
-KmnUtils.SrvClarifai = 'clarifai';
+KmnUtils.SrvClarifai = 'Clarifai';
 
 KmnUtils.LogTrace = 6;
 KmnUtils.LogDebug = 5;
