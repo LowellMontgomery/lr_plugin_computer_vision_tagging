@@ -127,7 +127,7 @@ function ClarifaiAPI.getInfo()
 
   if reshdrs.status == 401 then
     ClarifaiAPI.getTokenUnsafe();
-    return getInfoGuard:performWithGuard(ClarifaiAPI.getInfo());
+    return getInfoGuard:performWithGuard(function () ClarifaiAPI.getInfo() end);
   end
   
   return JSON:decode(body);
@@ -156,7 +156,7 @@ function ClarifaiAPI.getUsage()
 
   if reshdrs.status == 401 then
     ClarifaiAPI.getTokenUnsafe();
-    return getInfoGuard:performWithGuard(ClarifaiAPI.getUsage());
+    return getInfoGuard:performWithGuard(function () ClarifaiAPI.getUsage() end);
   end
   
   return JSON:decode(body);
@@ -189,7 +189,7 @@ function ClarifaiAPI.getTags(photoPath, model, language)
   
   if reshdrs.status == 401 then
     ClarifaiAPI.getTokenUnsafe();
-    return getInfoGuard:performWithGuard(ClarifaiAPI.getTags(photoPath, model, language));
+    return getInfoGuard:performWithGuard(function () ClarifaiAPI.getTags(photoPath, model, language) end);
   end
 
   return JSON:decode(body);
