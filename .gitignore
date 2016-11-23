@@ -3,3 +3,27 @@
 .settings/
 ProjectPlan_private.md
 diagnostic_log.txt
+
+# Mac system files
+.DS_Store
+.AppleDouble
+.LSOverride
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+
+# Directories potentially created on remote AFP share
+.AppleDB
+.AppleDesktop
+Network Trash Folder
+Temporary Items
+.apdisk
+
+# Textmate project files:
+*.tmproj
+*.tmproject
+tmtags
