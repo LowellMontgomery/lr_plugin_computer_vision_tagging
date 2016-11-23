@@ -190,6 +190,35 @@ function InfoProvider.sectionsForTopOfDialog(viewFactory, properties)
           value = bind 'tag_window_show_probabilities',
         },
       },
+      -- Probability threshold (only used if autoSelectExistingKeywords is turned on.)
+      vf:row {
+         -- spacing = viewFactory:control_spacing(),
+        spacing = vf:label_spacing(),
+
+        vf:static_text {
+          title = LOC '$$$/ClarifaiTagger/Settings/autoSelectProbabilityThreshold=Minimum probability for keyword auto-selection:',
+          alignment = 'left',
+          width = share 'title_width',
+        },
+        vf:slider {
+          min = 1,
+          max = 99,
+          integral = true,
+          alignment = 'left',
+          value = bind { key = 'tag_window_auto_select_threshold', object = prefs },
+        },
+        vf:edit_field {
+          fill_horizonal = 1,
+          width_in_chars = 2,
+          min = 1,
+          max = 99,
+          increment = 1,
+          precision = 0,
+          alignment = 'left',
+          tooltip = 'Setting for what level of Clarifai-rated probability is required for a keyword to be auto-selected.\n\nIgnored unless the "Auto-Select existing keywords" setting is selected.',
+          value = bind { key = 'tag_window_auto_select_threshold', object = prefs },
+        },
+      },
       vf:row {
         spacing = vf:control_spacing(),
         vf:checkbox {
@@ -341,13 +370,14 @@ function InfoProvider.sectionsForTopOfDialog(viewFactory, properties)
 end
 
 function InfoProvider.sectionsForBottomOfDialog(viewFactory, properties)
+  local KwUtilsAttribution = require 'KwUtils'.Attribution
+  local LutilsAttribution = require 'LUTILS'.Attribution
   KmnUtils.log(KmnUtils.LogTrace, 'InfoProvider.sectionsForBottomOfDialog(viewFactory, properties)');
   local vf = viewFactory;
   
   return {
     {
       title = LOC '$$$/ComputerVisionTagging/Preferences/Acknowledgements=Acknowledgements',
-
       vf:static_text {
         title = LOC '$$$/ComputerVisionTagging/Preferences/SimpleJSON=Simple JSON',
         font = '<system/bold>',
@@ -357,6 +387,26 @@ function InfoProvider.sectionsForBottomOfDialog(viewFactory, properties)
         height_in_lines = 9,
         enabled = false,
         value = 'Simple JSON encoding and decoding in pure Lua.\n\nCopyright 2010-2016 Jeffrey Friedl\nhttp://regex.info/blog/\n\nLatest version: http://regex.info/blog/lua/json\n\nThis code is released under a Creative Commons CC-BY "Attribution" License:\nhttp://creativecommons.org/licenses/by/3.0/deed.en_US\n'
+      },
+      vf:static_text {
+        title = LOC '$$$/ClarifaiTagger/Settings/KwUtils=KwUtils: Keyword Utility Functions for Lightroom',
+        font = '<system/bold>',
+      },
+      vf:edit_field {
+        width_in_chars = 80,
+        height_in_lines = 5,
+        enabled = false,
+        value = KwUtilsAttribution
+      },
+      vf:static_text {
+        title = LOC '$$$/ClarifaiTagger/Settings/Lutils=LUTILS: Lua Utility Functions for Lightroom',
+        font = '<system/bold>',
+      },
+      vf:edit_field {
+        width_in_chars = 80,
+        height_in_lines = 5,
+        enabled = false,
+        value = LutilsAttribution
       }
     }
   }

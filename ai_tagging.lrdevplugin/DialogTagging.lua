@@ -35,6 +35,8 @@ local LrTasks = import 'LrTasks'
 local KmnUtils = require 'KmnUtils'
 local Tagging = require 'Tagging'
 local ClarifaiAPI = require 'ClarifaiAPI'
+local KwUtils = require 'KwUtils'
+local LUTILS = require 'LUTILS'
 
 local prefs = import 'LrPrefs'.prefsForPlugin(_PLUGIN.id)
 
@@ -216,7 +218,7 @@ function DialogTagging.buildDialog(photosToTag, exportParams, mainProgress)
     };
 
     local result = LrDialogs.presentModalDialog({
-      title = 'Computer Vission Tagging',
+      title = 'Computer Vision Tagging',
       contents = contents,
       resizeable = true,
     });
