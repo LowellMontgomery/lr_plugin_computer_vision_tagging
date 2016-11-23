@@ -198,14 +198,13 @@ function InfoProvider.sectionsForTopOfDialog(viewFactory, properties)
         vf:static_text {
           title = LOC '$$$/ClarifaiTagger/Settings/autoSelectProbabilityThreshold=Minimum probability for keyword auto-selection:',
           alignment = 'left',
-          width = share 'title_width',
         },
         vf:slider {
           min = 1,
           max = 99,
           integral = true,
           alignment = 'left',
-          value = bind { key = 'tag_window_auto_select_threshold', object = prefs },
+          value = bind 'tag_window_auto_select_threshold',
         },
         vf:edit_field {
           fill_horizonal = 1,
@@ -216,7 +215,7 @@ function InfoProvider.sectionsForTopOfDialog(viewFactory, properties)
           precision = 0,
           alignment = 'left',
           tooltip = 'Setting for what level of Clarifai-rated probability is required for a keyword to be auto-selected.\n\nIgnored unless the "Auto-Select existing keywords" setting is selected.',
-          value = bind { key = 'tag_window_auto_select_threshold', object = prefs },
+          value = bind 'tag_window_auto_select_threshold'
         },
       },
       vf:row {
