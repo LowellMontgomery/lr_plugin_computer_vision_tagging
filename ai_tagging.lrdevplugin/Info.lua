@@ -28,7 +28,7 @@ local menuItems = { { title = LOC '$$$/ComputerVisionTagging/MenuClarifaiInfo=Cl
                     { title = LOC '$$$/ComputerVisionTagging/menuClarifaiUsage=Clarifai API Usage', file = 'MenuClarifaiUsage.lua' },
 }
 
-local version = { major=2016, minor=10, revision=24, build=3, };
+local version = { major=2016, minor=11, revision=14, build=1, };
 version.display = version.major .. version.minor .. version.revision .. '.' .. version.build;
 
 return {
@@ -38,6 +38,7 @@ return {
 
   LrToolkitIdentifier = 'info.kemonine.lrcvt',
   LrPluginName = LOC "$$$/ComputerVisionTagging/PluginName=Computer Vision Tagging",
+  LrPluginInfoUrl = 'https://mcrosson.github.io/lr_plugin_computer_vision_tagging/',
   
   LrAlsoUseBuiltInTranslations = true,
   LrLimitNumberOfTempRenditions = true,
