@@ -42,7 +42,6 @@ local defaultPrefValues = {
   auto_select_existing_keywords = true,
   tag_window_show_services = true,
   tag_window_bold_existing_tags = true,
-  tag_window_auto_select_threshold = 85,
 }
 
 if prefs ~= nil then

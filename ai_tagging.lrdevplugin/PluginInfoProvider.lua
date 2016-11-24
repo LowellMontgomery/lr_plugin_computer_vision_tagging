@@ -190,34 +190,6 @@ function InfoProvider.sectionsForTopOfDialog(viewFactory, properties)
           value = bind 'tag_window_show_probabilities',
         },
       },
-      -- Probability threshold (only used if autoSelectExistingKeywords is turned on.)
-      vf:row {
-         -- spacing = viewFactory:control_spacing(),
-        spacing = vf:label_spacing(),
-
-        vf:static_text {
-          title = LOC '$$$/ClarifaiTagger/Settings/autoSelectProbabilityThreshold=Minimum probability for keyword auto-selection:',
-          alignment = 'left',
-        },
-        vf:slider {
-          min = 1,
-          max = 99,
-          integral = true,
-          alignment = 'left',
-          value = bind 'tag_window_auto_select_threshold',
-        },
-        vf:edit_field {
-          fill_horizonal = 1,
-          width_in_chars = 2,
-          min = 1,
-          max = 99,
-          increment = 1,
-          precision = 0,
-          alignment = 'left',
-          tooltip = 'Setting for what level of Clarifai-rated probability is required for a keyword to be auto-selected.\n\nIgnored unless the "Auto-Select existing keywords" setting is selected.',
-          value = bind 'tag_window_auto_select_threshold'
-        },
-      },
       vf:row {
         spacing = vf:control_spacing(),
         vf:checkbox {
