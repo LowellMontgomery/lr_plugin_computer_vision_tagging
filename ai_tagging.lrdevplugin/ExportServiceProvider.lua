@@ -353,7 +353,7 @@ function exportServiceProvider.processRenderedPhotos( functionContext, exportCon
     
       for photo, apiResult in pairs(photosToTag) do
         tagsByPhoto[photo] = {};
-        local tagDetails = ClarifaiAPI.processTagsProbibilities(apiResult);
+        local tagDetails = ClarifaiAPI.processTagsProbabilities(apiResult);
         for _, tag in ipairs(tagDetails) do
           tagsByPhoto[photo][tag.tag] = tag;
         end

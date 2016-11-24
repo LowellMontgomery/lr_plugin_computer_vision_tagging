@@ -195,8 +195,8 @@ function ClarifaiAPI.getTags(photoPath, model, language)
   return JSON:decode(body);
 end
 
-function ClarifaiAPI.processTagsProbibilities(response)
-  KmnUtils.log(KmnUtils.LogTrace, 'ClarifaiAPI.processTagsProbibilities(response)');
+function ClarifaiAPI.processTagsProbabilities(response)
+  KmnUtils.log(KmnUtils.LogTrace, 'ClarifaiAPI.processTagsProbabilities(response)');
   -- Don't crash if we receive an empty response
   -- #response will always return 0, do the check the hard way
   local hasResponseValues = false;
