@@ -198,17 +198,20 @@ function KwUtils.getOtherKeywords(photo, keywordNames)
     return ret
 end
 
--- Check for actual keyword (by keyword ID) associated with a photo
+-- Check for actual keyword (by keyword object, not name) associated with a photo
+-- Given a catalog photo, check for the presence of any given keyword.
 function KwUtils.hasKeywordById(photo, keyword)
     local keywordsForPhoto = photo:getRawMetadata('keywords')
+	--Look for keyword object passed in array of Keyword objects.
     return LUTILS.inTable(keyword, keywordsForPhoto)
 end
 
 -- Check if photo already has a particular keyword (by name)
+-- Converts all keywords to lower case before comparison which "ignores case"
 function KwUtils.hasKeywordByName(photo, keywordName)
     local photoKeywordList = string.lower(photo:getFormattedMetadata('keywordTags'))
     local keywordNamesTable = LUTILS.split(photoKeywordList, ', ')
-    return LUTILS.inTable(keywordName, keywordNamesTable)
+    return LUTILS.inTable(string.lower(keywordName), keywordNamesTable)
 end
 
 return KwUtils

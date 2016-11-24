@@ -44,6 +44,9 @@ local vf = LrView.osFactory();
 local bind = LrView.bind;
 local share = LrView.share
 
+local catalogKeywords = {}
+local catalogKeywordPaths = {}
+
 local DialogTagging = {};
 
 function DialogTagging.buildTagGroup(photo, tags, propertyTable, exportParams)
@@ -70,6 +73,8 @@ function DialogTagging.buildTagGroup(photo, tags, propertyTable, exportParams)
     );
   end
 
+  local existingPhotoKeywordString = photo:getFormattedMetadata('keywordTags');
+  local existingPhotoKeywordNames = LUTILS.split(string.lower(existingPhotoKeywordString, ', '));
   for i=1, #tags do
     local tagName = tags[i]['tag'];
     local fontString = '<system>';
@@ -81,11 +86,8 @@ function DialogTagging.buildTagGroup(photo, tags, propertyTable, exportParams)
       propertyTable[tagName] = true;
     end
     
-    -- Auto select tag if it's existing
-    if KmnUtils.photoHasKeyword(photo, tagName) then
-      if prefs.tag_window_bold_existing_tags then
-        fontString = '<system/bold>'
-      end
+    -- Auto select tag if it's already associated with the photo
+    if LUTILS.inTable(string.lower(tagName), existingPhotoKeywordNames) then
       propertyTable[tagName] = true;
     end
 
@@ -204,7 +206,7 @@ function DialogTagging.buildDialog(photosToTag, exportParams, mainProgress)
     local processedTags = {};
     
     for photo,tags in pairs(photosToTag) do
-      local photoProcessedTags = ClarifaiAPI.processTagsProbibilities(tags);
+      local photoProcessedTags = ClarifaiAPI.processTagsProbabilities(tags);
       processedTags[photo] = photoProcessedTags;
       columns[#columns + 1] = DialogTagging.buildColumn(context, exportParams, properties, photo, tags, photoProcessedTags);
     end

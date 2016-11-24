@@ -27,6 +27,8 @@ Various tagging functionality / features
 local LrApplication = import 'LrApplication'
 local LrProgressScope = import 'LrProgressScope'
 local KmnUtils = require 'KmnUtils'
+local KwUtils = require 'KwUtils'
+local LUTILS = require 'LUTILS'
 
 Tagging = {}
 
@@ -54,6 +56,9 @@ function Tagging.tagPhotos(tagsByPhoto, tagSelectionsByPhoto, parentProgress)
     if taggingProgress:isCanceled() then
       break;
     end
+
+    local existingPhotoKeywordString = photo:getFormattedMetadata('keywordTags');
+    local existingPhotoKeywordNames = LUTILS.split(string.lower(existingPhotoKeywordString, ', '));
     
     taggingProgress:setPortionComplete( photosProcessed, numPhotosToProcess );
     parentProgress:setCaption('Tagging ' .. photo:getFormattedMetadata( 'fileName' ));
@@ -66,7 +71,7 @@ function Tagging.tagPhotos(tagsByPhoto, tagSelectionsByPhoto, parentProgress)
       end
       
       catalog:withWriteAccessDo('writePhotosKeywords', function(context)
-        if tagSelectionsByPhoto[photo][taginfo.tag] ~= KmnUtils.photoHasKeyword(photo, taginfo.tag) then
+        if tagSelectionsByPhoto[photo][taginfo.tag] ~= LUTILS.inTable(string.lower(taginfo.tag), existingPhotoKeywordNames) then
           local keyword = catalog:createKeyword(taginfo.tag, {}, false, nil, true);
           if keyword == false then -- This keyword was created in the current withWriteAccessDo block, so we can't get by using `returnExisting`.
             keyword = newKeywords[taginfo.tag];
