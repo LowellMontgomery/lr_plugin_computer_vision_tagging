@@ -58,7 +58,7 @@ function Tagging.tagPhotos(tagsByPhoto, tagSelectionsByPhoto, parentProgress)
     end
 
     local existingPhotoKeywordString = photo:getFormattedMetadata('keywordTags');
-    local existingPhotoKeywordNames = LUTILS.split(string.lower(existingPhotoKeywordString, ', '));
+    local existingPhotoKeywordNames = LUTILS.split(string.lower(existingPhotoKeywordString), ', ');
     
     taggingProgress:setPortionComplete( photosProcessed, numPhotosToProcess );
     parentProgress:setCaption('Tagging ' .. photo:getFormattedMetadata( 'fileName' ));

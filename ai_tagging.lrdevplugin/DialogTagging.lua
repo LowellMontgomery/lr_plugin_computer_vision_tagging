@@ -74,7 +74,7 @@ function DialogTagging.buildTagGroup(photo, tags, propertyTable, exportParams)
   end
 
   local existingPhotoKeywordString = photo:getFormattedMetadata('keywordTags');
-  local existingPhotoKeywordNames = LUTILS.split(string.lower(existingPhotoKeywordString, ', '));
+  local existingPhotoKeywordNames = LUTILS.split(string.lower(existingPhotoKeywordString), ', ');
   for i=1, #tags do
     local tagName = tags[i]['tag'];
     local fontString = '<system>';
