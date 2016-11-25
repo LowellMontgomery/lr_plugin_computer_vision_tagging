@@ -144,6 +144,24 @@ function DialogTagging.buildColumn(context, exportParams, properties, photo, tag
     }
   };
   
+  contents[#contents + 1] = vf:row {
+    vf:push_button {
+      title = 'View Full Size Image',
+      action = function (clickedview)
+        LrDialogs.presentModalDialog({
+          title = 'Review Image',
+          contents = vf:catalog_photo {
+            photo = photo,
+            width = prefs.image_preview_window_width,
+            height = prefs.image_preview_window_height,
+          },
+          cancelVerb = '< exclude >',
+          actionVerb = 'Close Window',
+        });
+        end
+    },
+  };
+  
   -- There are circumstances where no tags will be returned, be sure to avoid a null crash on tags.meta
   --    in case that happens
   if tags.meta ~= nil then 
@@ -176,6 +194,16 @@ function DialogTagging.buildColumn(context, exportParams, properties, photo, tag
   properties[photo] = imageProperties;
 
   contents[#contents + 1] = DialogTagging.buildTagGroup(photo, processedTags, imageProperties, exportParams);
+
+  local existingTagRows = {title = 'Existing Tags'};
+  for _, keyword in ipairs(KmnUtils.sortedPhotoKeywords(photo)) do
+    existingTagRows[#existingTagRows + 1] = vf:row {
+      vf:static_text {
+        title = keyword
+      },
+    };
+  end
+  contents[#contents +1] = vf:group_box(existingTagRows);
 
   contents['height'] = prefs.tag_window_height - 50;
   contents['horizontal_scroller'] = false;

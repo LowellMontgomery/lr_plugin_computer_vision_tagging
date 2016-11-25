@@ -213,9 +213,7 @@ function InfoProvider.sectionsForTopOfDialog(viewFactory, properties)
           width_in_chars = 7,
           increment = 1,
           precision = 0,
-        }
-      },
-      vf:row {
+        },
         spacing = vf:control_spacing(),
         vf:static_text {
           title = 'Tagging window height',
@@ -251,6 +249,36 @@ function InfoProvider.sectionsForTopOfDialog(viewFactory, properties)
           width_in_chars = 4,
           min = 128,
           max = 512,
+          increment = 1,
+          precision = 0,
+        }
+      },
+      vf:row {
+        spacing = vf:control_spacing(),
+        vf:static_text {
+          title = 'Image preview window width',
+          tooltip = 'Width (px) of the image preview window',
+        },
+        vf:edit_field {
+          value = bind 'image_preview_window_width',
+          tooltip = 'Width (px) of the image preview window',
+          min = 512,
+          max = 999999,
+          width_in_chars = 7,
+          increment = 1,
+          precision = 0,
+        },
+        spacing = vf:control_spacing(),
+        vf:static_text {
+          title = 'Image preview window height',
+          tooltip = 'Height (px) of the image preview window',
+        },
+        vf:edit_field {
+          value = bind 'image_preview_window_height',
+          tooltip = 'Height (px) of the image preview window',
+          min = 384,
+          max = 999999,
+          width_in_chars = 7,
           increment = 1,
           precision = 0,
         }
