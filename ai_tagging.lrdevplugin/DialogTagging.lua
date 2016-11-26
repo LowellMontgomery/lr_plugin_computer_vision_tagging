@@ -23,6 +23,9 @@ Builds the tagging dialog that is shown at the end of export
 
 
 ------------------------------------------------------------------------------]]
+local Require = require 'Require'.path ("../../debugscript.lrdevplugin")
+local Debug = require 'Debug'.init ()
+require 'strict'
 
 local LrApplication = import 'LrApplication'
 local LrView = import 'LrView'
@@ -44,8 +47,10 @@ local vf = LrView.osFactory();
 local bind = LrView.bind;
 local share = LrView.share
 
-local catalogKeywords = {}
-local catalogKeywordPaths = {}
+LrTasks.startAsyncTask(Debug.showErrors(function()
+  local catalog = LrApplication.activeCatalog()
+  local allKeys = KwUtils.getAllKeywords(catalog);
+end));
 
 local DialogTagging = {};
 
@@ -77,42 +82,60 @@ function DialogTagging.buildTagGroup(photo, tags, propertyTable, exportParams)
   local existingPhotoKeywordNames = LUTILS.split(string.lower(existingPhotoKeywordString), ', ');
   for i=1, #tags do
     local tagName = tags[i]['tag'];
-    local fontString = '<system>';
-    local tagRow = {};
+    local tagNameLower = string.lower(tagName);
+    local keysByName = KwUtils.catKws[tagNameLower];
+    local numKeysByName = keysByName ~= nil and #keysByName or 0;
+    for tagNameIndex=0, numKeysByName do
+      local tagNamePlusIndex = tagName .. "_" .. tagNameIndex
+      local fontString = '<system>';
+      local tagRow = {};
+      local tt = '' -- tooltip
+      if KwUtils.catKwPaths[tagNameLower] and KwUtils.catKwPaths[tagNameLower][tagNameIndex] == '' then
+        tt = '(In the keyword root level)'
+      elseif KwUtils.catKwPaths[lowerkey] ~= nil then
+        tt = '(In ' .. KwUtils.catKwPaths[tagNameLower][tagNameIndex] .. ')'
+      end
 
-    propertyTable[tagName] = false;
-    -- Auto select tag if probability is above threshold
-    if exportParams.global_auto_select_tags and (tags[i]['probability'] * 100) >= exportParams.global_auto_select_tags_p_min then
-      propertyTable[tagName] = true;
-    end
+      propertyTable[tagNamePlusIndex] = false;
+      -- Auto select tag if probability is above threshold
+      if exportParams.global_auto_select_tags and (tags[i]['probability'] * 100) >= exportParams.global_auto_select_tags_p_min then
+        propertyTable[tagNamePlusIndex] = true;
+      end
     
-    -- Auto select tag if it's already associated with the photo
-    if LUTILS.inTable(string.lower(tagName), existingPhotoKeywordNames) then
-      propertyTable[tagName] = true;
-    end
+      -- Auto select tag if it's already associated with the photo
+      if LUTILS.inTable(string.lower(tagName), existingPhotoKeywordNames) then
+        local keyword = KwUtils.catKws[string.lower(tagName)][tagNameIndex]
+        if KwUtils.hasKeywordById(photo, keyword) then
+          propertyTable[tagNamePlusIndex] = true
+        else
+          propertyTable[tagNamePlusIndex] = false
+        end
+      end
 
-    tagRow[#tagRow + 1] = vf:checkbox {
-      bind_to_object = propertyTable,
-      title = tagName,
-      font = fontString,
-      checked_value = true,
-      unchecked_value = false,
-      value = bind(tagName),
-    };
-
-    if prefs.tag_window_show_probabilities then
-      tagRow[#tagRow + 1] = vf:static_text {
-        title = string.format('(%2.1f)', tags[i]['probability'] * 100),
+      tagRow[#tagRow + 1] = vf:checkbox {
+        bind_to_object = propertyTable,
+        title = tagName,
+        font = fontString,
+        checked_value = true,
+        unchecked_value = false,
+        value = bind(tagNamePlusIndex),
+        tooltip = tt
       };
-    end
+
+      if prefs.tag_window_show_probabilities then
+        tagRow[#tagRow + 1] = vf:static_text {
+          title = string.format('(%2.1f)', tags[i]['probability'] * 100),
+        };
+      end
     
-    if prefs.tag_window_show_services then
-      tagRow[#tagRow + 1] = vf:static_text {
-        title = '[' .. tags[i]['service'] .. ']',
-      };
-    end
+      if prefs.tag_window_show_services then
+        tagRow[#tagRow + 1] = vf:static_text {
+          title = '[' .. tags[i]['service'] .. ']',
+        };
+      end
 
-    tagRows[#tagRows + 1] = vf:row(tagRow);
+      tagRows[#tagRows + 1] = vf:row(tagRow);
+    end
   end
 
   tagRows['title'] = 'Tags/Probabilities';
@@ -216,7 +239,7 @@ end
 function DialogTagging.buildDialog(photosToTag, exportParams, mainProgress)
   KmnUtils.log(KmnUtils.LogTrace, 'DialogTagging.buildDialog(photosToTag, exportParams, mainProgress)');
   KmnUtils.log(KmnUtils.LogTrace, table.tostring(photosToTag));
-  LrFunctionContext.callWithContext('DialogTagger', function(context)
+  LrFunctionContext.callWithContext('DialogTagger', (function(context)
     -- If don't have photos to tag (empty table), bail out with error
     -- Note #photosToTag will ALWAYS return 0, do the check the hard way
     local hasPhotosToTag = false;
@@ -267,7 +290,7 @@ function DialogTagging.buildDialog(photosToTag, exportParams, mainProgress)
       end
       Tagging.tagPhotos(tagsByPhoto, tagSelectionsByPhoto, mainProgress);
     end
-  end);
+  end));
 end
 
 return DialogTagging;
