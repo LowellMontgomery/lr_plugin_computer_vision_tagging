@@ -23,9 +23,9 @@ Builds the tagging dialog that is shown at the end of export
 
 
 ------------------------------------------------------------------------------]]
-local Require = require 'Require'.path ("../../debugscript.lrdevplugin")
-local Debug = require 'Debug'.init ()
-require 'strict'
+-- local Require = require 'Require'.path ("../../debugscript.lrdevplugin")
+-- local Debug = require 'Debug'.init ()
+-- require 'strict'
 
 local LrApplication = import 'LrApplication'
 local LrView = import 'LrView'
@@ -47,10 +47,10 @@ local vf = LrView.osFactory();
 local bind = LrView.bind;
 local share = LrView.share
 
-LrTasks.startAsyncTask(Debug.showErrors(function()
+LrTasks.startAsyncTask(function()
   local catalog = LrApplication.activeCatalog()
   local allKeys = KwUtils.getAllKeywords(catalog);
-end));
+end);
 
 local DialogTagging = {};
 

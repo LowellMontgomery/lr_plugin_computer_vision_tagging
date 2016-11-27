@@ -23,9 +23,9 @@ Various tagging functionality / features
 
 
 ------------------------------------------------------------------------------]]
-local Require = require 'Require'.path("../../debugscript.lrdevplugin")
-local Debug = require 'Debug'.init()
-require 'strict'
+-- local Require = require 'Require'.path("../../debugscript.lrdevplugin")
+-- local Debug = require 'Debug'.init()
+-- require 'strict'
 
 local LrApplication = import 'LrApplication'
 local LrProgressScope = import 'LrProgressScope'
