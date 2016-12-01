@@ -61,7 +61,8 @@ function Tagging.tagPhotos(tagsByPhoto, tagSelectionsByPhoto, parentProgress)
       end
 
       local existingPhotoKeywordString = photo:getFormattedMetadata('keywordTags');
-      local existingPhotoKeywordNames = LUTILS.split(string.lower(existingPhotoKeywordString), ', ');
+      local existingPhotoKeywordNames = LUTILS.split(existingPhotoKeywordString, ', ');
+      local existingPhotoKeywordNamesLower = LUTILS.split(string.lower(existingPhotoKeywordString), ', ');
     
       taggingProgress:setPortionComplete( photosProcessed, numPhotosToProcess );
       parentProgress:setCaption('Tagging ' .. photo:getFormattedMetadata( 'fileName' ));
@@ -69,25 +70,27 @@ function Tagging.tagPhotos(tagsByPhoto, tagSelectionsByPhoto, parentProgress)
       KmnUtils.log(KmnUtils.LogDebug, 'Tagging ' .. photo:getFormattedMetadata( 'fileName' ));
     
       for tag, taginfo in pairs(tags) do
-        local kwName = taginfo.tag;
-        local kwLower = string.lower(kwName)
-        local keywordsByName = _G.AllKeys[kwLower]
+        local tagName = taginfo.tag;
+        local tagLower = string.lower(tagName)
+        local keywordsByName = _G.AllKeys[tagLower]
         local numKeysByName = keywordsByName ~= nil and #keywordsByName or 0
         -- First deal with the issue of adding a keyword that was not in the Lightroom library before:
         if numKeysByName == 0 then
-            local keyword = catalog:createKeyword(kwName, {}, false, nil, true);
+          local checkboxState = tagSelectionsByPhoto[photo][tagName][1];
+          if checkboxState == true then
+            local keyword = catalog:createKeyword(tagName, {}, false, nil, true);
             if keyword == false then -- This keyword was created in the current withWriteAccessDo block, so we can't get by using `returnExisting`.
-              keyword = newKeywords[kwName];
+              keyword = newKeywords[tagName];
             else
-              newKeywords[kwName] = keyword;
+              newKeywords[tagName] = keyword;
             end
             photo:addKeyword(keyword)
+          end
         else
           for i=1, numKeysByName do
-            local checkboxName = kwName .. "_" .. i;
-            local checkboxState = tagSelectionsByPhoto[photo][checkboxName]
-            local keyword = _G.AllKeys[kwLower][i]
-            if numKeysByName == 1 and checkboxState ~= KwUtils.hasKeywordByName(photo, kwName) then
+            local checkboxState = tagSelectionsByPhoto[photo][tagName][i];
+            local keyword = _G.AllKeys[tagLower][i];
+            if numKeysByName == 1 and (checkboxState ~= LUTILS.inTable(tagLower, existingPhotoKeywordNamesLower)) then
               KwUtils.addOrRemoveKeyword(photo, keyword, checkboxState)
             elseif numKeysByName > 1 then
             -- We need to use more accurate (less performant) means to verify the actual keyword

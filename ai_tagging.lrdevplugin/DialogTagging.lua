@@ -85,7 +85,7 @@ function DialogTagging.buildTagGroup(photo, colNum, tags, propertyTable, exportP
     local keysByName = _G.AllKeys[tagNameLower];
     local numKeysByName = keysByName ~= nil and #keysByName or 0;
     if numKeysByName == 0 then
-      DialogTagging.addTagRow(photo, colNum, tagRows, tagProperties, 0, propertyTable, exportParams)
+      DialogTagging.addTagRow(photo, colNum, tagRows, tagProperties, 1, propertyTable, exportParams)
     else
       for j,numKeysByName in ipairs(keysByName) do
         DialogTagging.addTagRow(photo, colNum, tagRows, tagProperties, j, propertyTable, exportParams)
@@ -93,7 +93,13 @@ function DialogTagging.buildTagGroup(photo, colNum, tags, propertyTable, exportP
     end   
   end
 
-  tagRows['title'] = 'Tags/Probabilities';
+  local showProbs = prefs.tag_window_show_probabilities;
+  local showServices = prefs.tag_window_show_services;
+  tagRowsTitle = (showProbs == true) and 'Tags / Probabilities' or 'Tags';
+  tagRowsTitle = (showServices == true) and tagRowsTitle .. ' / Services:' or tagRowsTitle .. ':';
+  
+  tagRows['title'] = tagRowsTitle;
+  tagRows['font'] = '<system/bold>';
   
   -- Only show the * Note if we have at least one already-associated
   -- keyword which has a name corresponding to a "suggested tag" from the service.
@@ -137,13 +143,17 @@ function DialogTagging.addTagRow(photo, colNum, tagRows, tagProperties, tagNameI
     elseif _G.AllKeyPaths[tagNameLower][tagNameIndex] ~= nil then
       tt = '(In ' .. _G.AllKeyPaths[tagNameLower][tagNameIndex] .. ')'
     end
-  elseif tagNameIndex == 0 then
-    tt = "New keyword by the name “”" .. tagName .. "” will be created by selecting this tag."
+    -- This tag does not correspond to an existing keyword:
+    else -- _G.AllKeyPaths[tagNameLower] == nil
+      tt = "New keyword by the name “”" .. tagName .. "” will be created by selecting this tag."
   end
 
   propertyTable[tagNamePlusIndex] = false;
-  -- Auto select tag if probability is above threshold
-  if exportParams.global_auto_select_tags and tagProbability >= exportParams.global_auto_select_tags_p_min then
+  -- Auto select tag if probability is above threshold,
+  -- if the keyword exists in the Lr catalog, and if this behavior is configured:
+  local autoSelect = exportParams.global_auto_select_tags
+  local autoSelectThreshold = exportParams.global_auto_select_tags_p_min
+  if (_G.AllKeyPaths[tagNameLower] ~= nil) and autoSelect and (tagProbability >= autoSelectThreshold) then
     propertyTable[tagNamePlusIndex] = true;
   end
 
@@ -155,7 +165,7 @@ function DialogTagging.addTagRow(photo, colNum, tagRows, tagProperties, tagNameI
       propertyTable[tagNamePlusIndex] = true
       tagName = tagName .. "*";
       showStarMessage[colNum] = true;
-    -- If there are more than one keyword objects with the name, actually check the keyword object
+    -- If there are more than one keyword objects with the name, actually examine the keyword object
     -- to correctly set the checkbox state:
     elseif #_G.AllKeyPaths[tagNameLower] > 1 then
       local keyword = _G.AllKeys[tagNameLower][tagNameIndex];
@@ -203,7 +213,7 @@ function DialogTagging.buildColumn(context, exportParams, photo, colNumber, tags
     photoTitle = LrPathUtils.leafName( photo.path );
   end
   
-  -- contents[1] = spacing = f:label_spacing(8);
+  -- contents[#contents + 1] = spacing = f:label_spacing(8);
 
   contents[#contents + 1] = vf:row {
     vf:static_text {
@@ -234,8 +244,8 @@ function DialogTagging.buildColumn(context, exportParams, photo, colNumber, tags
   
   local previewWidth = prefs.image_preview_window_width;
   local previewHeight = prefs.image_preview_window_height;
-  local previewButtonTt = "Open larger preview (in " .. previewWidth .. " x " .. previewHeight .. "px window)";
-  
+  local dimensions = previewWidth .. " x " .. previewHeight .. "px";
+  local previewButtonTt = "Open larger preview (in window with configured dimensions of: " .. dimensions .. ")";
   
   contents[#contents + 1] = vf:row {
     spacing = vf:control_spacing(),
@@ -290,7 +300,7 @@ function DialogTagging.buildColumn(context, exportParams, photo, colNumber, tags
   local imageProperties = LrBinding.makePropertyTable(context);
   properties[photo] = imageProperties;
 
-  contents[#contents + 1] = vf:spacer { width = 1, height = 4};
+  contents[#contents + 1] = vf:spacer { width = 1, height = 8};
   contents[#contents + 1] = DialogTagging.buildTagGroup(photo, colNumber, processedTags, imageProperties, exportParams);
   contents[#contents + 1] = vf:spacer { width = 1, height = 4};
 
@@ -390,7 +400,17 @@ function DialogTagging.buildDialog(photosToTag, exportParams, mainProgress)
         sleepTimer = sleepTimer + 1;
     end
     
-    -- Trim our lookup keyword and path lookup tables to only include the necessary tag terms
+    if sleepTimer < 30 then
+      KmnUtils.log(KmnUtils.LogTrace, 'Global _G.AllKeys ready for use after ' .. sleepTimer .. ' seconds');
+    else 
+      KmnUtils.log(KmnUtils.LogTrace, 'Global _G.AllKeys non-existent after waiting ' .. sleepTimer .. ' seconds');
+      LrDialogs.showError('Problems encountered processing catalog keywords. Timed out after ' .. sleepTimer .. ' seconds');
+      return
+    end
+    
+    -- Trim our lookup keyword and path lookup tables to include only what we need.
+    -- After this _G.AllKeys and _G.AllKeyPaths will only include keywords and paths which
+    -- correspond to the tags returned by the service
     for keyNameLower,_ in pairs(_G.AllKeys) do
       if not (LUTILS.inTable(keyNameLower, AllPhotoTagsLower)) then
         _G.AllKeys[keyNameLower] = nil;
@@ -436,7 +456,20 @@ function DialogTagging.buildDialog(photosToTag, exportParams, mainProgress)
         for _, taginfo in ipairs(processedTags[photo]) do
           local tagName = taginfo.tag;
           tagsByPhoto[photo][tagName] = taginfo;
-          tagSelectionsByPhoto[photo][tagName] = tagValues[tagName];
+          -- Tag labels have an extra index from 1 to as many keywords have the name
+          local tagIndex = 1;
+          local tagNameLower = string.lower(tagName);
+          tagSelectionsByPhoto[photo][tagName] = {}
+          if _G.AllKeys[tagNameLower] ~= nil then
+            -- There may be several keywords which share the same "tagName"
+            -- Each of the keywords has its own checkbox indexed from 1
+            for i,_ in ipairs(_G.AllKeys[tagNameLower]) do
+              tagSelectionsByPhoto[photo][tagName][i] = tagValues[tagName .. "_" .. i];
+            end
+          else
+            -- There is not yet a keyword by the name "tagName"
+            tagSelectionsByPhoto[photo][tagName][1] = tagValues[tagName .. "_" .. 1];
+          end
         end
       end
       Tagging.tagPhotos(tagsByPhoto, tagSelectionsByPhoto, mainProgress);
