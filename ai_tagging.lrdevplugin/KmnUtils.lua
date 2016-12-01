@@ -120,24 +120,4 @@ function KmnUtils.enableDisableLogging()
   end
 end
 
-function KmnUtils.sortedPhotoKeywords(photo)
-  local keywords = {}
-  
-  -- Get the actual keyword names for the array
-  for _, k in ipairs(photo:getRawMetadata('keywords')) do
-    keywords[#keywords + 1] = k:getName();
-  end
-  
-  -- Sort the keywords alphabetically
-  table.sort(keywords, function(a, b)
-    if (a < b) then
-      return true;
-    end
-    
-    return false;
-  end);
-  
-  return keywords;
-end
-
 return KmnUtils;
