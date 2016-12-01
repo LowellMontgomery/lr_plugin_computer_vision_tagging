@@ -164,6 +164,7 @@ end
 
 function ClarifaiAPI.getTags(photoPath, model, language)
   KmnUtils.log(KmnUtils.LogTrace, 'ClarifaiAPI.getTags(photoPath, model, language)');
+  
   if not ClarifaiAPI.isTokenValid() then
     ClarifaiAPI.getTokenUnsafe();
   end
@@ -209,11 +210,13 @@ function ClarifaiAPI.processTagsProbabilities(response)
   end
   
   local processedTagsProbabilities = {}
+  local tagNames = {}
   for i, tag in ipairs(response['results'][1]['result']['tag']['classes']) do
     processedTagsProbabilities[#processedTagsProbabilities + 1] = { tag = tag, probability = response['results'][1]['result']['tag']['probs'][i], service = KmnUtils.SrvClarifai };
+    tagNames[#tagNames + 1] = string.lower(tag); -- Already in lower case for our use case
   end
   
-  return processedTagsProbabilities;
+  return processedTagsProbabilities, tagNames;
 end
 
 return ClarifaiAPI;
