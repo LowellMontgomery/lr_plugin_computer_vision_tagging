@@ -21,7 +21,7 @@ Utility functions for Lightroom Keywords
 
 local LUTILS = require 'LUTILS'
 
-KwUtils = {}
+local KwUtils = {}
 KwUtils.catKws = nil
 KwUtils.catKwPaths = nil
 
@@ -82,7 +82,7 @@ end
 
 -- Add or remove a keyword based on the "state" of the associated checkbox.
 -- Presumed is that we call this when the state differs from what is already on this image,
--- i.e. that they keyword is being changed for the photo (added or removed)
+-- i.e. that the keyword is being changed for the photo (added or removed)
 function KwUtils.addOrRemoveKeyword(photo, keyword, state)
     if state then
         KwUtils.addKeywordWithParents(photo, keyword)
@@ -175,11 +175,16 @@ function KwUtils.getKeywordChildNamesTable(parentKey)
 end
 
 -- Get names of all Keyword objects in a table
-function KwUtils.getKeywordNames(keywords)
+-- lc is a flag to return all names in lower case.
+function KwUtils.getKeywordNames(keywords, lc)
     local names = {}
     if type(keywords) == 'table' then
         for _,kw in ipairs(keywords) do
-            names[#names+1] = kw:getName()
+            if (lc) then
+                names[#names+1] = string.lower(kw:getName())
+            else
+                names[#names+1] = kw:getName()                
+            end
         end
     end
     return names
@@ -216,7 +221,7 @@ function KwUtils.getAllKeywords(catalog)
         local topLevelKeywords = catalog:getKeywords()
         return KwUtils.findAllKeywords(topLevelKeywords)
     end
-    return KwUtils.catKws
+    return KwUtils.catKws, KwUtils.catKwPaths;
 end
 
 -- Given a set of keywords (normally starting with a top level of a hierarchy),
@@ -245,7 +250,7 @@ function KwUtils.findAllKeywords(keywords, kpath)
          end
       end
    end
-   return KwUtils.catKws;
+   return KwUtils.catKws, KwUtils.catKwPaths;
 end
 
 -- Get number of keywords by a given name (adjusted to lower case) or false

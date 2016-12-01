@@ -37,8 +37,8 @@ Tagging = {}
 
 function Tagging.tagPhotos(tagsByPhoto, tagSelectionsByPhoto, parentProgress)
   KmnUtils.log(KmnUtils.LogTrace, 'Tagging.tagPhotos(tagsByPhoto, tagSelectionsByPhoto, parentProgress)');
-  KmnUtils.log(KmnUtils.LogTrace, table.tostring(tagsByPhoto));
-  KmnUtils.log(KmnUtils.LogTrace, table.tostring(tagSelectionsByPhoto));
+  -- KmnUtils.log(KmnUtils.LogTrace, table.tostring(tagsByPhoto));
+  -- KmnUtils.log(KmnUtils.LogTrace, table.tostring(tagSelectionsByPhoto));
 
   local taggingProgress = LrProgressScope({ title = 'Tagging photo(s)', parent = parentProgress });
   local numPhotosToProcess = 0;
@@ -53,7 +53,6 @@ function Tagging.tagPhotos(tagsByPhoto, tagSelectionsByPhoto, parentProgress)
   
   local catalog = LrApplication.activeCatalog();
   local newKeywords = {};
-  local allKeys = KwUtils.getAllKeywords(catalog);
   
   catalog:withWriteAccessDo('writePhotosKeywords', function(context)
     for photo, tags in pairs(tagsByPhoto) do
@@ -72,7 +71,7 @@ function Tagging.tagPhotos(tagsByPhoto, tagSelectionsByPhoto, parentProgress)
       for tag, taginfo in pairs(tags) do
         local kwName = taginfo.tag;
         local kwLower = string.lower(kwName)
-        local keywordsByName = KwUtils.catKws[kwLower]
+        local keywordsByName = _G.AllKeys[kwLower]
         local numKeysByName = keywordsByName ~= nil and #keywordsByName or 0
         -- First deal with the issue of adding a keyword that was not in the Lightroom library before:
         if numKeysByName == 0 then
@@ -87,7 +86,7 @@ function Tagging.tagPhotos(tagsByPhoto, tagSelectionsByPhoto, parentProgress)
           for i=1, numKeysByName do
             local checkboxName = kwName .. "_" .. i;
             local checkboxState = tagSelectionsByPhoto[photo][checkboxName]
-            local keyword = KwUtils.catKws[kwLower][i]
+            local keyword = _G.AllKeys[kwLower][i]
             if numKeysByName == 1 and checkboxState ~= KwUtils.hasKeywordByName(photo, kwName) then
               KwUtils.addOrRemoveKeyword(photo, keyword, checkboxState)
             elseif numKeysByName > 1 then

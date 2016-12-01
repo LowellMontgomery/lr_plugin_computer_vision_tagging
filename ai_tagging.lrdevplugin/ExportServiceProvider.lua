@@ -278,6 +278,16 @@ function exportServiceProvider.updateExportSettings( exportSettings )
 end
 
 function exportServiceProvider.processRenderedPhotos( functionContext, exportContext )
+
+-- First import LrTasks and LrApplication to set the globals for all keywords their "paths"
+-- This process can take a while to complete, but if we start it now, we won't have an error (hopefully)
+-- at the point where we need to build the dialog.
+  local LrTasks = import 'LrTasks'
+  LrTasks.startAsyncTask(function()
+    local catalog = import 'LrApplication'.activeCatalog();
+    _G.AllKeys, _G.AllKeyPaths = require 'KwUtils'.getAllKeywords(catalog)
+  end)
+
   KmnUtils.log(KmnUtils.LogTrace, 'exportServiceProvider.processRenderedPhotos(functionContext, exportContext)');
   local exportSession = exportContext.exportSession;
   local exportParams = exportContext.propertyTable;
@@ -365,8 +375,8 @@ function exportServiceProvider.processRenderedPhotos( functionContext, exportCon
           tagSelectionsByPhoto[photo][taginfo.tag] = exportParams.global_auto_save_tags_p_min < taginfo.probability * 100;
         end
       end
-      KmnUtils.log(KmnUtils.LogTrace, table.tostring(tagsByPhoto));
-      KmnUtils.log(KmnUtils.LogTrace, table.tostring(tagSelectionsByPhoto));
+      -- KmnUtils.log(KmnUtils.LogTrace, table.tostring(tagsByPhoto));
+      -- KmnUtils.log(KmnUtils.LogTrace, table.tostring(tagSelectionsByPhoto));
       Tagging.tagPhotos(tagsByPhoto, tagSelectionsByPhoto, progressScope);
     else 
       DialogTagging.buildDialog(photosToTag, exportParams, progressScope);
