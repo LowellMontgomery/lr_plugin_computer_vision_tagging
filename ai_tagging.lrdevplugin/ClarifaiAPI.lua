@@ -69,6 +69,7 @@ function ClarifaiAPI.isClientIdValid()
   return false;
 end
 
+-- Since it uses LrHttp.post, it must be called within LrTasks.startAsyncTask(function() block
 function ClarifaiAPI.getTokenUnsafe()
   KmnUtils.log(KmnUtils.LogTrace, 'ClarifaiAPI.getTokenUnsafe()');
   if not ClarifaiAPI.isClientIdValid() or not ClarifaiAPI.isSecretValid() then
@@ -78,37 +79,44 @@ function ClarifaiAPI.getTokenUnsafe()
   local headers = {
     { field = 'Content-Type', value = 'application/x-www-form-urlencoded' },
   };
-
   local data = 'grant_type=client_credentials&client_id=' .. prefs.clarifai_clientid .. '&client_secret=' .. prefs.clarifai_clientsecret;
-  local body, reshdrs = LrHttp.post(tokenAPIURL, data, headers);
+  _G.ResponseBody, _G.ResponseHeaders = nil, nil;
 
-  KmnUtils.log(KmnUtils.LogInfo, table.tostring(reshdrs));
-  KmnUtils.log(KmnUtils.LogInfo, body);
+  _G.ResponseBody, _G.ResponseHeaders = LrHttp.post(tokenAPIURL, data, headers);
+  
+  local timer = 0;
+  while _G.ResponseBody == nil and timer < 20 do
+    LrTasks.sleep(1);
+    timer = timer + 1;
+  end
 
-  if reshdrs.status == 401
+  KmnUtils.log(KmnUtils.LogInfo, table.tostring(_G.ResponseHeaders));
+  KmnUtils.log(KmnUtils.LogInfo, _G.ResponseBody);
+
+  if _G.ResponseHeaders.status == 401
     --and (reshdrs.status_code == 'TOKEN_APP_INVALID' or reshdrs.status_code == 'TOKEN_INVALID' or reshdrs.status_code == 'TOKEN_NONE' or reshdrs.status_code == 'TOKEN_NO_SCOPE')
   then
     LrDialogs.showError('Bad Clarifai Client ID or Client Secret. Please check your settings and try again');
     return
   end
 
-  local json = JSON:decode(body);
+  local json = JSON:decode(_G.ResponseBody);
   prefs.clarifai_accesstoken = json.access_token;
 end
 
 -- Main methods API consumers should call (everything is wrapped in tasks as appropriate)
 function ClarifaiAPI.getToken()
   KmnUtils.log(KmnUtils.LogTrace, 'ClarifaiAPI.getToken()');
-  LrTasks.startAsyncTask(function()
+  LrFunctionContext.postAsyncTaskWithContext( 'LrHttp-Post-ClarifaiAPI.getToken', function(context)
     ClarifaiAPI.getTokenUnsafe();
-  end, 'ClarifaiAPI.getToken');
+  end)
 end
 
 function ClarifaiAPI.getInfo()
   KmnUtils.log(KmnUtils.LogTrace, 'ClarifaiAPI.getInfo()');
   -- Ensure token is valid before running an operation
   if not ClarifaiAPI.isTokenValid() then
-    ClarifaiAPI.getTokenUnsafe();
+    ClarifaiAPI.getToken();
   end
   
   -- If token still isn't valid, return empty table
@@ -126,7 +134,7 @@ function ClarifaiAPI.getInfo()
   KmnUtils.log(KmnUtils.LogInfo, body);
 
   if reshdrs.status == 401 then
-    ClarifaiAPI.getTokenUnsafe();
+    ClarifaiAPI.getToken();
     return getInfoGuard:performWithGuard(function () ClarifaiAPI.getInfo() end);
   end
   
@@ -137,7 +145,7 @@ function ClarifaiAPI.getUsage()
   KmnUtils.log(KmnUtils.LogTrace, 'ClarifaiAPI.getUsage()');
   -- Make sure token is valid before running any operations
   if not ClarifaiAPI.isTokenValid() then
-    ClarifaiAPI.getTokenUnsafe();
+    ClarifaiAPI.getToken();
   end
   
   -- If token is still invalid, return empty table
@@ -155,7 +163,7 @@ function ClarifaiAPI.getUsage()
   KmnUtils.log(KmnUtils.LogInfo, body);
 
   if reshdrs.status == 401 then
-    ClarifaiAPI.getTokenUnsafe();
+    ClarifaiAPI.getToken();
     return getInfoGuard:performWithGuard(function () ClarifaiAPI.getUsage() end);
   end
   
@@ -166,7 +174,7 @@ function ClarifaiAPI.getTags(photoPath, model, language)
   KmnUtils.log(KmnUtils.LogTrace, 'ClarifaiAPI.getTags(photoPath, model, language)');
   
   if not ClarifaiAPI.isTokenValid() then
-    ClarifaiAPI.getTokenUnsafe();
+    ClarifaiAPI.getToken();
   end
   
   -- If token still isn't valid, return empty table
@@ -186,10 +194,11 @@ function ClarifaiAPI.getTags(photoPath, model, language)
     { name = 'encoded_data', fileName = fileName, filePath = photoPath, contentType = 'application/octet-stream' };
   };
 
-  local body, reshdrs = LrHttp.postMultipart(tagAPIURL, mimeChunks, headers);
+  local timeout = 10;
+  local body, reshdrs = LrHttp.postMultipart(tagAPIURL, mimeChunks, headers, timeout);
   
   if reshdrs.status == 401 then
-    ClarifaiAPI.getTokenUnsafe();
+    ClarifaiAPI.getToken();
     return getInfoGuard:performWithGuard(function () ClarifaiAPI.getTags(photoPath, model, language) end);
   end
 
