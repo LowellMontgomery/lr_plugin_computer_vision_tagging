@@ -25,7 +25,7 @@ local KwUtils = {}
 KwUtils.catKws = nil
 KwUtils.catKwPaths = nil
 
-KwUtils.VERSION = 20161126.03 -- version history at end of file
+KwUtils.VERSION = 20161202.04 -- version history at end of file
 KwUtils.AUTHOR_NOTE = "KwUtils.lua is a set of Lightroom keyword utility functions, © 2016 by Lowell Montgomery (https://lowemo.photo/lightroom-keyword-utils) version: " .. KwUtils.VERSION
 
 -- The following provides an 80 character-width attribution text that can be inserted for display
@@ -213,54 +213,66 @@ function KwUtils.getIgnoreKeywordsTable()
     return ignoreKeysTable
 end
 
--- This function must be called from within an asynchronous task started using LrTasks.
-function KwUtils.getAllKeywords(catalog)
-    if KwUtils.catKws == nil then
-        KwUtils.catKws = {}
-        KwUtils.catKwPaths = {}
-        local topLevelKeywords = catalog:getKeywords()
-        return KwUtils.findAllKeywords(topLevelKeywords)
-    end
-    return KwUtils.catKws, KwUtils.catKwPaths;
+-- This function creates its own LrTasks.startAsyncTask() call and will run
+-- as a background task that may yield. Be sure to check that the _G.AllKeys
+-- variable exists before attempting to access its contents. (For this, you
+-- could use LUTILS.waitForGlobal("AllKeys", timeout), which would time out after
+-- timeout seconds if _G.AllKeys doesn't exist.
+function KwUtils.getAllKeywords()
+    local LrTasks = import 'LrTasks';
+    LrTasks.startAsyncTask(function()
+        local catalog = import 'LrApplication'.activeCatalog();
+        if KwUtils.catKws == nil then
+            KwUtils.catKws = {}
+            KwUtils.catKwPaths = {}
+            local topLevelKeywords = catalog:getKeywords()
+            _G.AllKeys, _G.AllKeyPaths = KwUtils.findAllKeywords(topLevelKeywords)
+        end
+        return _G.AllKeys, _G.AllKeyPaths
+    end)
 end
 
 -- Given a set of keywords (normally starting with a top level of a hierarchy),
 -- get all keywords in the set with any child/descendant keywords) and populate
 -- our top-level keyword table variables with data we can quickly use.
+-- It has been extended to also collect the "ancestry path" for each keyword.
 function KwUtils.findAllKeywords(keywords, kpath)
-   kpath = kpath or ''
-   local ignoreKeysTable = KwUtils.getIgnoreKeywordsTable()
-   for _, kw in pairs(keywords) do
-      local name = kw:getName()
+    kpath = kpath or ''
+    local ignoreKeysTable = KwUtils.getIgnoreKeywordsTable()
+    for _, kw in pairs(keywords) do
+        local name = kw:getName()
       -- Skip any keywords (and descendants) listed in the ignoreKeysTable
-      if not LUTILS.inTable(name, ignoreKeysTable) then
-         local keyname = string.lower(name)
-         if KwUtils.catKws[keyname] ~= nil then
-            local count = #KwUtils.catKws[keyname]
-            KwUtils.catKws[keyname][count + 1] = kw
-            KwUtils.catKwPaths[keyname][count + 1] = kpath
-         else
-            KwUtils.catKws[keyname] = {kw}
-            KwUtils.catKwPaths[keyname] = {kpath}
-         end
-         local kids = kw:getChildren()
-         if kids and #kids > 0 then
-            local new_kpath = kpath ~= '' and kpath .. ' | ' .. name or name
-            KwUtils.findAllKeywords(kids, new_kpath)
-         end
-      end
-   end
-   return KwUtils.catKws, KwUtils.catKwPaths;
+        if not LUTILS.inTable(name, ignoreKeysTable) then
+            local keyname = string.lower(name)
+            if KwUtils.catKws[keyname] ~= nil then
+                local count = #KwUtils.catKws[keyname]
+                KwUtils.catKws[keyname][count + 1] = kw
+                KwUtils.catKwPaths[keyname][count + 1] = kpath
+            else
+                KwUtils.catKws[keyname] = {kw}
+                KwUtils.catKwPaths[keyname] = {kpath}
+            end
+            local kids = kw:getChildren()
+            if kids and #kids > 0 then
+                local new_kpath = kpath ~= '' and kpath .. ' | ' .. name or name
+                KwUtils.findAllKeywords(kids, new_kpath)
+            end
+        end
+    end
+    return KwUtils.catKws, KwUtils.catKwPaths
 end
 
 -- Get number of keywords by a given name (adjusted to lower case) or false
 -- if the keyword does not exist. This functionality depends on first running
 -- KwUtils.findAllKeywords() to populate the catKws table.
-function KwUtils.keywordExists(keyword)
-   if KwUtils.catKws[string.lower(keyword)] ~= nil then
-      return #KwUtils.catKws[string.lower(keyword)]
-   end
-   return false
+function KwUtils.keywordByNameExists(keyName)
+    -- Set ignoreCase flag to true, by default
+    keyName = string.lower(keyName);
+    if _G.AllKeys[keyName] ~= nil then
+        -- Return the number of keywords by the passed name
+        return #_G.AllKeys[keyName]
+    end
+    return false
 end
 
 
@@ -294,6 +306,21 @@ function KwUtils.hasKeywordByName(photo, keywordName)
     return LUTILS.inTable(string.lower(keywordName), keywordNamesTable)
 end
 
+-- Here we return new variables for the reduced tables of keywords and keyword paths.
+-- These can be assigned to _G.AllKeys, _G.AllKeyPaths or to new variables if plugin
+-- logic dictates a later need for the full contents of the original global tables. 
+function KwUtils.trimKeywordTablesToKeys(keys)
+    local newKeys = {};
+    local newKeyPaths = {};
+    for _,k in pairs(keys) do
+        if (_G.AllKeys[k] ~= nil) then
+            newKeys[k] = _G.AllKeys[k];
+            newKeyPaths[k] = _G.AllKeyPaths[k];
+        end
+    end
+    return newKeys, newKeyPaths;    
+end
+
 return KwUtils
 
 -- 20161101.01 Initial release.
@@ -302,3 +329,5 @@ return KwUtils
 -- 20161126.03 Moved more logic into the KwUtils. It is no longer a local bundle, so this may have ramifications for memory
 --             etc, but allows us to call "expenive" processes (new findAllKeywords() / getAllKeywords() functionality) and
 --             hopefully be able to access the results from other scripts in a plugin. Still "pre-release"
+-- 20161202.04 Moved more logic here for populating global keyword tables (_G.AllKeys and _G.AllKeyPaths)
+--             as well as a new utility function, trimKeywordTablesToKeys, and other small improvements.

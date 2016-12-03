@@ -24,7 +24,7 @@ avoid including this file from causing undue bloat.
 
 local LUTILS = {}
 
-LUTILS.VERSION = 20161121.02 -- version history at end of file
+LUTILS.VERSION = 20161202.03 -- version history at end of file
 LUTILS.AUTHOR_NOTE = "LUTILS.lua--Lua utility functions by Lowell Montgomery (https://lowemo.photo/lightroom-lua-utils) version: " .. LUTILS.VERSION
 
 -- The following provides an 80 character-width attribution text that can be inserted for display
@@ -76,7 +76,36 @@ function LUTILS.trim(s)
     return string.gsub(s, '^%s*(.-)%s*$', '%1');
 end
 
+--Given a table, tbl, with keys (normally strings) that may include much more
+-- data than we need, and simple array of keys that may exist in tbl, return a new
+-- table, with only the key:value pairs corresponding to the 'keys' array.
+-- NOTE: This function does NOT contain (e.g. string.lower) case conversion;
+-- It assumes that is already done and/or there are cases where this is not wanted.
+function LUTILS.trimTableToKeys (tbl, keys)
+    local newTable = {};
+    for _,k in pairs(keys) do
+        newTable[k] = tbl[k] ~= nil and tbl[k] or nil;
+    end
+    return newTable;
+end
+
+--Wait for a global variable that may not have been initialized yet. If it is nil, wait.
+-- Times out after 'timeout' seconds (or 30s, if only one argument is passed)
+-- Returns the number of seconds which were waited (for debug/monitoring purposes) or false
+-- if the timeout was reached and the variable name still didn't exist.
+function LUTILS.waitForGlobal(globalName, timeout)
+    local sleepTimer = 0;
+    local LrTasks = import 'LrTasks';
+    local timeout = (timeout ~= nil) and timeout or 30;
+    while (_G[globalName] == nil) and (sleepTimer < timeout) do
+        LrTasks.sleep(1);
+        sleepTimer = sleepTimer + 1;
+    end
+    return _G[globalName] ~= nil and sleepTimer or false
+end
+
 return LUTILS;
 
 -- 20161101.01 Initial pre-release version
 -- 20161121.02 2nd Pre-release version; only minor changes.
+-- 20161202.03 3rd pre-release version. Added new functions LUTILS.trimTableToKeys() and LUTILS.waitForGlobal()
