@@ -28,7 +28,7 @@ local menuItems = { { title = LOC '$$$/ComputerVisionTagging/MenuClarifaiInfo=Cl
                     { title = LOC '$$$/ComputerVisionTagging/menuClarifaiUsage=Clarifai API Usage', file = 'MenuClarifaiUsage.lua' },
 }
 
-local version = { major=2016, minor=11, revision=24, build=1, };
+local version = { major=2016, minor=12, revision=03, build=1, };
 version.display = version.major .. version.minor .. version.revision .. '.' .. version.build;
 
 return {
