@@ -279,14 +279,8 @@ end
 
 function exportServiceProvider.processRenderedPhotos( functionContext, exportContext )
 
--- First import LrTasks and LrApplication to set the globals for all keywords their "paths"
--- This process can take a while to complete, but if we start it now, we won't have an error (hopefully)
--- at the point where we need to build the dialog.
-  local LrTasks = import 'LrTasks'
-  LrTasks.startAsyncTask(function()
-    local catalog = import 'LrApplication'.activeCatalog();
-    _G.AllKeys, _G.AllKeyPaths = require 'KwUtils'.getAllKeywords(catalog)
-  end)
+-- Begin process of traversing keyword list to initialize globals for all keywords and their "paths"
+  _G.AllKeys, _G.AllKeyPaths = require 'KwUtils'.getAllKeywords();
 
   KmnUtils.log(KmnUtils.LogTrace, 'exportServiceProvider.processRenderedPhotos(functionContext, exportContext)');
   local exportSession = exportContext.exportSession;

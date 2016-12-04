@@ -23,13 +23,14 @@ Builds the tagging dialog that is shown at the end of export
 
 
 ------------------------------------------------------------------------------]]
--- local Require = require 'Require'.path ("../../debugscript.lrdevplugin")
+-- local Require = require 'Require'.path ("../debugscript.lrdevplugin")
 -- local Debug = require 'Debug'.init ()
 -- require 'strict'
 
 local LrApplication = import 'LrApplication'
 local LrView = import 'LrView'
 local LrBinding = import 'LrBinding'
+local LrColor = import 'LrColor'
 local LrDialogs = import 'LrDialogs'
 local LrFunctionContext = import 'LrFunctionContext'
 local LrProgressScope = import 'LrProgressScope'
@@ -105,16 +106,18 @@ function DialogTagging.buildTagGroup(photo, colNum, tags, propertyTable, exportP
   -- keyword which has a name corresponding to a "suggested tag" from the service.
   -- (I.e. the message is never shown if this is the first keywording done for the photo.)
   if (showStarMessage[colNum]) then
-    local starMessage = "Existing keyword for photo;\nunchecking will REMOVE existing keyword.";
+    local starMessage = "Existing keyword; unchecking will\nDELETE keyword from the image!";
     tagRows[#tagRows + 1] = vf:row {
       -- spacing = vf:label_spacing(),
       vf:static_text {
         title = '*', -- Asterisk we add to "name" of previously-selected keyword/tags.
-        font = '<system/bold>'
+        font = '<system/bold>',
+        text_color = LrColor('red'),
       },
       vf:static_text {
         title = starMessage,
-        font = '<system>'
+        font = '<system>',
+        text_color = LrColor('red'),
       }
     };
   end  
@@ -241,14 +244,17 @@ function DialogTagging.buildColumn(context, exportParams, photo, colNumber, tags
       -- end
     }
   };
+  contents[#contents + 1] = vf:spacer { width = 1, height = 4};
   
   local previewWidth = prefs.image_preview_window_width;
   local previewHeight = prefs.image_preview_window_height;
   local dimensions = previewWidth .. " x " .. previewHeight .. "px";
   local previewButtonTt = "Open larger preview (in window with configured dimensions of: " .. dimensions .. ")";
-  
   contents[#contents + 1] = vf:row {
     spacing = vf:control_spacing(),
+    vf:static_text {
+        title = '       ',
+    },
     vf:push_button {
       title = 'View Full Preview',
       tooltip = previewButtonTt,
@@ -270,7 +276,7 @@ function DialogTagging.buildColumn(context, exportParams, photo, colNumber, tags
   -- There are circumstances where no tags will be returned, be sure to avoid a null crash on tags.meta
   --    in case that happens
   if tags.meta ~= nil then
-    contents[#contents + 1] = vf:spacer { width = 1, height = 1};
+    contents[#contents + 1] = vf:spacer { width = 1, height = 8};
     contents[#contents + 1] = vf:row {
       spacing = vf:label_spacing(),
       vf:group_box {
@@ -318,8 +324,11 @@ function DialogTagging.buildColumn(context, exportParams, photo, colNumber, tags
   end
   
   -- Only add the group if there is at least one other keyword to display
-  if #otherTags > 0 then
-    local existingTagRows = {title = 'Other Keywords for Image', font = '<system/bold>'};
+  local existingTagRows;
+  if #otherTags == 0 then
+    existingTagRows = {title = 'No other keywords for Image', font = '<system/bold>'};
+  else
+    existingTagRows = {title = 'Other Keywords for Image', font = '<system/bold>'};
     for _, keywordName in ipairs(otherTags) do
       existingTagRows[#existingTagRows + 1] = vf:row {
         vf:static_text {
@@ -397,38 +406,29 @@ function DialogTagging.buildDialog(photosToTag, exportParams, mainProgress)
     
     -- Before we trim down our lookup table for keywords and keyword paths, we should
     -- be sure the process of populating our global variables for these has completed.
-    local sleepTimer = 0;
     local timeout = 30; -- If it doesn't complete within 30s more, something is wrong.
     -- If someone has a large number of photos selected, and a short keyword list, the
     -- tag processing loop thread may not be complete. both processes must be complete.
-    while ((_G.AllKeys == nil or tagsProcessed == false) and (sleepTimer < timeout)) do
-        LrTasks.sleep(1);
-        sleepTimer = sleepTimer + 1;
-    end
+    local timeWaited = LUTILS.waitForGlobal('AllKeys', timeout);
     
-    if sleepTimer < 30 then
-      KmnUtils.log(KmnUtils.LogTrace, 'Global _G.AllKeys ready for use after ' .. sleepTimer .. ' seconds');
-    else
+    if timeWaited and timeWaited < timeout then
+      KmnUtils.log(KmnUtils.LogTrace, 'Global _G.AllKeys ready for use after ' .. timeWaited .. ' seconds');
+    elseif timeWaited == false then
       if _G.AllKeys == false then
-        KmnUtils.log(KmnUtils.LogTrace, 'Global _G.AllKeys non-existent after waiting ' .. sleepTimer .. ' seconds');
-        LrDialogs.showError('Problems encountered processing catalog keywords. Timed out after ' .. sleepTimer .. ' seconds');
+        KmnUtils.log(KmnUtils.LogTrace, 'Global _G.AllKeys non-existent after waiting ' .. timeout .. ' seconds');
+        LrDialogs.showError('Problems encountered processing catalog keywords. Timed out after ' .. timeout .. ' seconds');
       elseif tagsProcessed == false then
-        KmnUtils.log(KmnUtils.LogTrace, 'Timing out on processing photo tags after ' .. sleepTimer .. ' seconds');
-        LrDialogs.showError('Problems processing photo tags. Timed out after ' .. sleepTimer .. ' seconds');
+        KmnUtils.log(KmnUtils.LogTrace, 'Timing out on processing photo tags after ' .. timeout .. ' seconds');
+        LrDialogs.showError('Problems processing photo tags. Timed out after ' .. timeout .. ' seconds');
       end
       return
     end
     
     -- Trim our lookup keyword and path lookup tables to include only what we need.
     -- After this _G.AllKeys and _G.AllKeyPaths will only include keywords and paths which
-    -- correspond to the tags returned by the service
-    for keyNameLower,_ in pairs(_G.AllKeys) do
-      if not (LUTILS.inTable(keyNameLower, AllPhotoTagsLower)) then
-        _G.AllKeys[keyNameLower] = nil;
-        _G.AllKeyPaths[keyNameLower] = nil;
-      end
-    end
-
+    -- correspond to tags returned by the service
+    _G.AllKeys, _G.AllKeyPaths = KwUtils.trimKeywordTablesToKeys(AllPhotoTagsLower);
+    
     -- KmnUtils.log(KmnUtils.LogTrace, "Catalog Keywords");
     -- KmnUtils.log(KmnUtils.LogTrace, table.tostring( _G.AllKeys ));
     -- KmnUtils.log(KmnUtils.LogTrace, "Catalog Keyword Paths");
