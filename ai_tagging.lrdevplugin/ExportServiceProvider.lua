@@ -377,7 +377,10 @@ function exportServiceProvider.processRenderedPhotos( functionContext, exportCon
       end
       -- KmnUtils.log(KmnUtils.LogTrace, table.tostring(tagsByPhoto));
       -- KmnUtils.log(KmnUtils.LogTrace, table.tostring(tagSelectionsByPhoto));
-      Tagging.tagPhotos(tagsByPhoto, tagSelectionsByPhoto, progressScope);
+      -- Some methods called in Tagging.tagPhotos must be made from within an LrTasks thread.
+      LrTasks.startAsyncTask(function()
+        Tagging.tagPhotos(tagsByPhoto, tagSelectionsByPhoto, progressScope);
+      end)
     else 
       DialogTagging.buildDialog(photosToTag, exportParams, progressScope);
     end

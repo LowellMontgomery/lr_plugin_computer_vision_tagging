@@ -69,7 +69,7 @@ function ClarifaiAPI.isClientIdValid()
   return false;
 end
 
--- Since it uses LrHttp.post, it must be called within LrTasks.startAsyncTask(function() block
+-- Since it uses LrHttp.post, it must be called within LrFunctionContext.postAsyncTaskWithContext block
 function ClarifaiAPI.getTokenUnsafe()
   KmnUtils.log(KmnUtils.LogTrace, 'ClarifaiAPI.getTokenUnsafe()');
   if not ClarifaiAPI.isClientIdValid() or not ClarifaiAPI.isSecretValid() then
@@ -107,6 +107,7 @@ end
 -- Main methods API consumers should call (everything is wrapped in tasks as appropriate)
 function ClarifaiAPI.getToken()
   KmnUtils.log(KmnUtils.LogTrace, 'ClarifaiAPI.getToken()');
+  local LrFunctionContext = import 'LrFunctionContext'
   LrFunctionContext.postAsyncTaskWithContext( 'LrHttp-Post-ClarifaiAPI.getToken', function(context)
     ClarifaiAPI.getTokenUnsafe();
   end)

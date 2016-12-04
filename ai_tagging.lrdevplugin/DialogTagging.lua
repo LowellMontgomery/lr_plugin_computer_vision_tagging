@@ -366,45 +366,56 @@ function DialogTagging.buildDialog(photosToTag, exportParams, mainProgress)
     local processedTags = {};
     local AllPhotoTagsLower = {};
     local colNum = 1;
-    for photo,tags in pairs(photosToTag) do
-      processedTags[photo], tagNamesLower[colNum] = ClarifaiAPI.processTagsProbabilities(tags);
-      local photoKeywords = photo:getRawMetadata('keywords');
-      local photoKeywordLowerNames = KwUtils.getKeywordNames(photoKeywords, true);
-      photoKeywordTables[#photoKeywordTables + 1] = photoKeywords;
-      photoKeywordLowerNamesTable[#photoKeywordLowerNamesTable + 1] = photoKeywordLowerNames;
-      
-      -- Add to array of all returned tags (for the current selection of photos)
-      for _,tagInfo in ipairs(processedTags[photo]) do
-        if not (LUTILS.inTable(string.lower(tagInfo.tag), AllPhotoTagsLower)) then
-          AllPhotoTagsLower[#AllPhotoTagsLower + 1] = string.lower(tagInfo.tag);
-        end
-      end
-      
-      for _,keyNameLower in ipairs(photoKeywordLowerNames) do
-        if not (LUTILS.inTable(keyNameLower, allPhotoKeywordLowerNames)) then
-          allPhotoKeywordLowerNames[#allPhotoKeywordLowerNames + 1] = keyNameLower;
-        end
-      end
-      colNum = colNum + 1;
-    end
+    -- We are calling photo:getRawMetadata, etc in this loop, calls which should be in a LrTasks-started thread:
+    local tagsProcessed = false; -- Flag to set we have completed this loop whose thread may be paused
+    LrTasks.startAsyncTask(function()
+      for photo,tags in pairs(photosToTag) do
+        processedTags[photo], tagNamesLower[colNum] = ClarifaiAPI.processTagsProbabilities(tags);
+        local photoKeywords = photo:getRawMetadata('keywords');
+        local photoKeywordLowerNames = KwUtils.getKeywordNames(photoKeywords, true);
+        photoKeywordTables[#photoKeywordTables + 1] = photoKeywords;
+        photoKeywordLowerNamesTable[#photoKeywordLowerNamesTable + 1] = photoKeywordLowerNames;
     
+        -- Add to array of all returned tags (for the current selection of photos)
+        for _,tagInfo in ipairs(processedTags[photo]) do
+          if not (LUTILS.inTable(string.lower(tagInfo.tag), AllPhotoTagsLower)) then
+            AllPhotoTagsLower[#AllPhotoTagsLower + 1] = string.lower(tagInfo.tag);
+          end
+        end
+    
+        for _,keyNameLower in ipairs(photoKeywordLowerNames) do
+          if not (LUTILS.inTable(keyNameLower, allPhotoKeywordLowerNames)) then
+            allPhotoKeywordLowerNames[#allPhotoKeywordLowerNames + 1] = keyNameLower;
+          end
+        end
+        colNum = colNum + 1;
+      end
+      tagsProcessed = true;
+    end)
     -- KmnUtils.log(KmnUtils.LogTrace, "AllPhotoTagsLower");
     -- KmnUtils.log(KmnUtils.LogTrace, table.tostring(AllPhotoTagsLower));
     
     -- Before we trim down our lookup table for keywords and keyword paths, we should
     -- be sure the process of populating our global variables for these has completed.
     local sleepTimer = 0;
-    local timeout = 30; -- If it doesn't complete within 30s more, something is wrong. 
-    while ((_G.AllKeys == nil) and (sleepTimer < timeout)) do
+    local timeout = 30; -- If it doesn't complete within 30s more, something is wrong.
+    -- If someone has a large number of photos selected, and a short keyword list, the
+    -- tag processing loop thread may not be complete. both processes must be complete.
+    while ((_G.AllKeys == nil or tagsProcessed == false) and (sleepTimer < timeout)) do
         LrTasks.sleep(1);
         sleepTimer = sleepTimer + 1;
     end
     
     if sleepTimer < 30 then
       KmnUtils.log(KmnUtils.LogTrace, 'Global _G.AllKeys ready for use after ' .. sleepTimer .. ' seconds');
-    else 
-      KmnUtils.log(KmnUtils.LogTrace, 'Global _G.AllKeys non-existent after waiting ' .. sleepTimer .. ' seconds');
-      LrDialogs.showError('Problems encountered processing catalog keywords. Timed out after ' .. sleepTimer .. ' seconds');
+    else
+      if _G.AllKeys == false then
+        KmnUtils.log(KmnUtils.LogTrace, 'Global _G.AllKeys non-existent after waiting ' .. sleepTimer .. ' seconds');
+        LrDialogs.showError('Problems encountered processing catalog keywords. Timed out after ' .. sleepTimer .. ' seconds');
+      elseif tagsProcessed == false then
+        KmnUtils.log(KmnUtils.LogTrace, 'Timing out on processing photo tags after ' .. sleepTimer .. ' seconds');
+        LrDialogs.showError('Problems processing photo tags. Timed out after ' .. sleepTimer .. ' seconds');
+      end
       return
     end
     
@@ -424,56 +435,58 @@ function DialogTagging.buildDialog(photosToTag, exportParams, mainProgress)
     -- KmnUtils.log(KmnUtils.LogTrace, table.tostring( _G.AllKeyPaths ));
 
     local colNum = 1;
-    for photo,tags in pairs(photosToTag) do
-      columns[colNum] = DialogTagging.buildColumn(context, exportParams, photo, colNum, tags, processedTags[photo]);
-      colNum = colNum + 1;
-    end
+    -- Some functions which we use on the photo object must be called from an LrTask
+    LrTasks.startAsyncTask(function()
+      for photo,tags in pairs(photosToTag) do
+        columns[colNum] = DialogTagging.buildColumn(context, exportParams, photo, colNum, tags, processedTags[photo]);
+        colNum = colNum + 1;
+      end
 
-    local contents = vf:scrolled_view {
-      width = prefs.tag_window_width,
-      height = prefs.tag_window_height,
-      horizontal_scroller = true,
-      vertical_scroller = true,
-      vf:row(columns)
-    };
+      local contents = vf:scrolled_view {
+        width = prefs.tag_window_width,
+        height = prefs.tag_window_height,
+        horizontal_scroller = true,
+        vertical_scroller = true,
+        vf:row(columns)
+      };
 
-    local result = LrDialogs.presentModalDialog({
-      title = 'Computer Vision Tagging',
-      contents = contents,
-      resizeable = true,
-    });
-    
+      dialogResult = LrDialogs.presentModalDialog({
+        title = 'Computer Vision Tagging',
+        contents = contents,
+        resizeable = true,
+      });
     -- KmnUtils.log(KmnUtils.LogTrace, "Properties table for Tagging Dialog");
     -- KmnUtils.log(KmnUtils.LogTrace, table.tostring(properties));
 
-    if result == 'ok' then
-      local tagsByPhoto = {}
-      local tagSelectionsByPhoto = {}
+      if result == 'ok' then
+        local tagsByPhoto = {}
+        local tagSelectionsByPhoto = {}
 
-      for photo, tagValues in pairs(properties) do
-        tagsByPhoto[photo] = {}
-        tagSelectionsByPhoto[photo] = {}
-        for _, taginfo in ipairs(processedTags[photo]) do
-          local tagName = taginfo.tag;
-          tagsByPhoto[photo][tagName] = taginfo;
-          -- Tag labels have an extra index from 1 to as many keywords have the name
-          local tagIndex = 1;
-          local tagNameLower = string.lower(tagName);
-          tagSelectionsByPhoto[photo][tagName] = {}
-          if _G.AllKeys[tagNameLower] ~= nil then
-            -- There may be several keywords which share the same "tagName"
-            -- Each of the keywords has its own checkbox indexed from 1
-            for i,_ in ipairs(_G.AllKeys[tagNameLower]) do
-              tagSelectionsByPhoto[photo][tagName][i] = tagValues[tagName .. "_" .. i];
+        for photo, tagValues in pairs(properties) do
+          tagsByPhoto[photo] = {}
+          tagSelectionsByPhoto[photo] = {}
+          for _, taginfo in ipairs(processedTags[photo]) do
+            local tagName = taginfo.tag;
+            tagsByPhoto[photo][tagName] = taginfo;
+            -- Tag labels have an extra index from 1 to as many keywords have the name
+            local tagIndex = 1;
+            local tagNameLower = string.lower(tagName);
+            tagSelectionsByPhoto[photo][tagName] = {}
+            if _G.AllKeys[tagNameLower] ~= nil then
+              -- There may be several keywords which share the same "tagName"
+              -- Each of the keywords has its own checkbox indexed from 1
+              for i,_ in ipairs(_G.AllKeys[tagNameLower]) do
+                tagSelectionsByPhoto[photo][tagName][i] = tagValues[tagName .. "_" .. i];
+              end
+            else
+              -- There is not yet a keyword by the name "tagName"
+              tagSelectionsByPhoto[photo][tagName][1] = tagValues[tagName .. "_" .. 1];
             end
-          else
-            -- There is not yet a keyword by the name "tagName"
-            tagSelectionsByPhoto[photo][tagName][1] = tagValues[tagName .. "_" .. 1];
           end
         end
+        Tagging.tagPhotos(tagsByPhoto, tagSelectionsByPhoto, mainProgress);
       end
-      Tagging.tagPhotos(tagsByPhoto, tagSelectionsByPhoto, mainProgress);
-    end
+    end)
   end))
 end
 
